@@ -1,0 +1,2 @@
+Hello ASCII sample
+This file contains only ASCII characters.
