@@ -4,10 +4,6 @@ import * as fs from 'fs';
 import { detectEncoding } from '../encoding';
 
 suite('Encoding detection', () => {
-    before(() => {
-        const gen = require('../../tools/generate-samples');
-        if (typeof gen === 'function') gen();
-    });
 
     test('ascii detected as utf8', () => {
         const p = path.resolve(__dirname, '..', '..', 'sample', 'ascii.txt');
