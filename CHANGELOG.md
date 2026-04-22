@@ -1,9 +1,5 @@
-# Change Log
-
-All notable changes to the "vscode-encodex" extension will be documented in this file.
-
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+# Changelog
 
 ## [Unreleased]
 
-- Initial release
+- Initial MVP: encoding detection heuristics, sample tests, and basic command wiring
