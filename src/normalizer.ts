@@ -10,7 +10,6 @@
 const ENCODING_MAP: Record<string, string> = {
     // UTF-8
     'utf8':       'utf8',
-    'utf08':      'utf8',
 
     // UTF-8 with BOM
     'utf8bom':    'utf8bom',
@@ -18,16 +17,13 @@ const ENCODING_MAP: Record<string, string> = {
 
     // UTF-16
     'utf16le':    'utf16le',
-    'utf1716le':  'utf16le', // typo guard
     'utf16be':    'utf16be',
     'utf16':      'utf16le', // assume LE for bare UTF-16
 
-    // Latin-1 / ISO-8859-1
-    'latin1':     'latin1',
-    'latin01':    'latin1',
-    'iso88591':   'latin1',
-    'iso8859':    'latin1',
-    'iso88590':   'latin1',  // some tools omit the trailing digit
+    // Latin-1 / ISO-8859-1 — VS Code's canonical identifier is 'iso88591'
+    'latin1':     'iso88591',
+    'iso88591':   'iso88591',
+    'iso8859':    'iso88591', // bare ISO-8859 without a part number
 
     // ISO-8859-2 through ISO-8859-15
     'iso88592':   'iso88592',
