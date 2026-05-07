@@ -28,21 +28,16 @@ export function resolveTargetEncoding(uri: vscode.Uri, buf: Buffer): string | nu
  * VS Code re-reads it with that encoding, then restores the previous value.
  */
 async function reopenWithEncoding(uri: vscode.Uri, target: string): Promise<void> {
-    const configTarget = vscode.workspace.workspaceFolders?.length
-        ? vscode.ConfigurationTarget.Workspace
-        : vscode.ConfigurationTarget.Global;
     const filesConfig = vscode.workspace.getConfiguration('files');
-    const prev = configTarget === vscode.ConfigurationTarget.Workspace
-        ? filesConfig.inspect<string>('encoding')?.workspaceValue
-        : filesConfig.inspect<string>('encoding')?.globalValue;
+    const prev = filesConfig.inspect<string>('encoding')?.globalValue;
 
-    await filesConfig.update('encoding', target, configTarget);
+    await filesConfig.update('encoding', target, vscode.ConfigurationTarget.Global);
     try {
         await vscode.window.showTextDocument(uri, { preview: false });
         await vscode.commands.executeCommand('workbench.action.files.revert');
         console.log(`[Encodex] ✓ reopened as '${target}'`);
     } finally {
-        await filesConfig.update('encoding', prev, configTarget);
+        await filesConfig.update('encoding', prev, vscode.ConfigurationTarget.Global);
     }
 }
 
