@@ -28,41 +28,66 @@ export function resolveTargetEncoding(uri: vscode.Uri, buf: Buffer): string | nu
  * encoding from config/declaration, and warns the user when VS Code opened the
  * file with a different encoding than expected.
  */
-export async function handleDocumentOpen(doc: vscode.TextDocument): Promise<void> {
+export async function handleDocumentOpen(
+    doc: vscode.TextDocument,
+    out: vscode.OutputChannel,
+): Promise<void> {
     if (doc.uri.scheme !== 'file' || doc.isUntitled) { return; }
 
-    let buf: Buffer;
-    try {
-        buf = fs.readFileSync(doc.uri.fsPath);
-    } catch {
-        return; // file unreadable at the OS level — nothing we can do
-    }
-
-    const target = resolveTargetEncoding(doc.uri, buf);
-    if (target === null) { return; }
-
-    // doc.encoding is the VS Code encoding identifier used to decode this file.
-    const current = normalizeEncoding(doc.encoding);
-    if (current === target) { return; }
-
     const fileName = path.basename(doc.uri.fsPath);
-    const msg = `Encodex: '${fileName}' should be opened as '${target}'. Currently using '${current}'.`;
+    out.appendLine(`[open] ${fileName}`);
 
-    const choice = await vscode.window.showWarningMessage(msg, `Reopen as ${target}`, 'Ignore');
-    if (choice === `Reopen as ${target}`) {
-        const configTarget = vscode.workspace.workspaceFolders?.length
-            ? vscode.ConfigurationTarget.Workspace
-            : vscode.ConfigurationTarget.Global;
-        const filesConfig = vscode.workspace.getConfiguration('files');
-        const prev = configTarget === vscode.ConfigurationTarget.Workspace
-            ? filesConfig.inspect<string>('encoding')?.workspaceValue
-            : filesConfig.inspect<string>('encoding')?.globalValue;
-        await filesConfig.update('encoding', target, configTarget);
+    try {
+        let buf: Buffer;
         try {
-            await vscode.window.showTextDocument(doc.uri, { preview: false });
-            await vscode.commands.executeCommand('workbench.action.files.revert');
-        } finally {
-            await filesConfig.update('encoding', prev, configTarget);
+            buf = fs.readFileSync(doc.uri.fsPath);
+        } catch (err) {
+            out.appendLine(`  ! could not read file: ${err}`);
+            return;
         }
+
+        const target = resolveTargetEncoding(doc.uri, buf);
+        out.appendLine(`  target encoding : ${target ?? '(none — no declaration or config)'}`);
+        if (target === null) { return; }
+
+        // doc.encoding is the VS Code encoding identifier used to decode this file.
+        const rawEncoding: string | undefined = (doc as any).encoding;
+        if (rawEncoding === undefined) {
+            out.appendLine('  ! doc.encoding is undefined — VS Code API not available, skipping');
+            return;
+        }
+        const current = normalizeEncoding(rawEncoding);
+        out.appendLine(`  current encoding: ${current} (raw: ${rawEncoding})`);
+
+        if (current === target) {
+            out.appendLine('  ✓ already correct, no action needed');
+            return;
+        }
+
+        out.appendLine(`  ⚠ mismatch — prompting user to reopen as '${target}'`);
+
+        const msg = `Encodex: '${fileName}' should be opened as '${target}'. Currently using '${current}'.`;
+        const choice = await vscode.window.showWarningMessage(msg, `Reopen as ${target}`, 'Ignore');
+        out.appendLine(`  user chose: ${choice ?? '(dismissed)'}`);
+
+        if (choice === `Reopen as ${target}`) {
+            const configTarget = vscode.workspace.workspaceFolders?.length
+                ? vscode.ConfigurationTarget.Workspace
+                : vscode.ConfigurationTarget.Global;
+            const filesConfig = vscode.workspace.getConfiguration('files');
+            const prev = configTarget === vscode.ConfigurationTarget.Workspace
+                ? filesConfig.inspect<string>('encoding')?.workspaceValue
+                : filesConfig.inspect<string>('encoding')?.globalValue;
+            await filesConfig.update('encoding', target, configTarget);
+            try {
+                await vscode.window.showTextDocument(doc.uri, { preview: false });
+                await vscode.commands.executeCommand('workbench.action.files.revert');
+                out.appendLine(`  ✓ reopened as '${target}'`);
+            } finally {
+                await filesConfig.update('encoding', prev, configTarget);
+            }
+        }
+    } catch (err) {
+        out.appendLine(`  ! unexpected error: ${err}`);
     }
 }
