@@ -7,20 +7,20 @@ import { normalizeEncoding } from './normalizer';
 
 /**
  * Determines what encoding a file *should* be opened with, based on:
- *  1. The `encodex.extensionMap` configuration for the file's extension.
- *  2. If the configured value is "auto", the encoding declared in the file's
- *     XML processing instruction (e.g. <?xml version="1.0" encoding="UTF-8"?>).
+ *  1. Explicit `encodex.extensionMap` entry for the file's extension (wins).
+ *  2. Fallback for any file: check for an XML/ARXML encoding declaration
+ *     (<?xml version="1.0" encoding="..."?>) in the first 1 KB of the file.
  *
  * Returns a normalized VS Code encoding identifier, or null when no
- * intervention is needed (extension not mapped, or "auto" with no declaration).
+ * intervention is needed (no config entry and no XML declaration found).
  */
 export function resolveTargetEncoding(uri: vscode.Uri, buf: Buffer): string | null {
     const configured = getExpectedEncoding(uri);
-    if (configured === null) { return null; }
-    if (configured === 'auto') {
-        return detectXmlDeclaration(buf); // null if no declaration found
+    if (configured !== null) {
+        return configured; // explicit config always wins
     }
-    return configured;
+    // Universal fallback: detect encoding from XML declaration if present.
+    return detectXmlDeclaration(buf);
 }
 
 /**

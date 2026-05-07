@@ -1,11 +1,4 @@
-import * as path from 'path';
 import { normalizeEncoding } from './normalizer';
-
-// File extensions treated as XML-family (may contain an <?xml?> declaration).
-const XML_EXTENSIONS = new Set([
-    '.xml', '.arxml', '.xsd', '.xsl', '.xslt',
-    '.svg', '.xhtml', '.plist', '.wsdl', '.rss', '.atom',
-]);
 
 /**
  * Returns the encoding derived from the BOM at the start of `buf`,
@@ -63,14 +56,6 @@ export function detectXmlDeclaration(buf: Buffer): string | null {
     if (!match) { return null; }
 
     return normalizeEncoding(match[1]);
-}
-
-/**
- * Returns true when the file's extension belongs to the XML family
- * (files that may carry an <?xml?> declaration).
- */
-export function isXmlFile(fsPath: string): boolean {
-    return XML_EXTENSIONS.has(path.extname(fsPath).toLowerCase());
 }
 
 /**

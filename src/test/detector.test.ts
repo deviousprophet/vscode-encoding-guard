@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
-import { detectBom, detectEncoding, detectXmlDeclaration, isXmlFile } from '../detector';
+import { detectBom, detectEncoding, detectXmlDeclaration } from '../detector';
 
 // Sample directory is at <workspace-root>/sample/
 // tsconfig rootDir=src, outDir=out  →  __dirname = <root>/out/test
@@ -130,12 +130,3 @@ suite('detectEncoding (heuristic)', () => {
     });
 });
 
-suite('isXmlFile', () => {
-    test('recognizes .xml', () => assert.ok(isXmlFile('foo.xml')));
-    test('recognizes .arxml', () => assert.ok(isXmlFile('foo.arxml')));
-    test('recognizes .xsd', () => assert.ok(isXmlFile('foo.xsd')));
-    test('recognizes .svg', () => assert.ok(isXmlFile('foo.svg')));
-    test('rejects .txt', () => assert.ok(!isXmlFile('foo.txt')));
-    test('rejects .csv', () => assert.ok(!isXmlFile('foo.csv')));
-    test('is case-insensitive', () => assert.ok(isXmlFile('foo.XML')));
-});

@@ -29,7 +29,7 @@
         "encodex.extensionMap": {
           "type": "object",
           "scope": "resource",
-          "description": "Map file extensions (with leading dot, e.g. \".arxml\") to a VS Code encoding identifier (e.g. \"utf8\", \"windows1252\") or \"auto\" to detect from the XML/ARXML declaration header.",
+          "description": "Map file extensions (with leading dot, e.g. \".csv\") to a VS Code encoding identifier (e.g. \"utf8\", \"windows1252\"). Files with an XML/ARXML encoding declaration (<?xml ... encoding=\"...\"?>) are handled automatically for all extensions even without a mapping.",
           "default": {},
           "additionalProperties": {
             "type": "string"

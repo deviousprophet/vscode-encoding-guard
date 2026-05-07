@@ -49,10 +49,8 @@ export function activate(context: vscode.ExtensionContext) {
             if (xmlDecl) {
                 lines.push(`XML declaration:  ${xmlDecl}`);
             }
-            if (configured && configured !== 'auto') {
+            if (configured) {
                 lines.push(`Config expects:   ${configured}`);
-            } else if (configured === 'auto') {
-                lines.push(`Config expects:   auto (from XML declaration)`);
             }
 
             vscode.window.showInformationMessage(lines.join('\n'), { modal: true });

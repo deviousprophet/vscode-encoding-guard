@@ -1,10 +1,47 @@
 # vscode-encodex
 
-Encodex is a VS Code extension that automatically manages file encodings so files open and save correctly without manual intervention, especially in mixed-encoding projects.
+Encodex is a VS Code extension that automatically detects and applies the correct file encoding when you open files, so text is never garbled in mixed-encoding projects.
 
-## Features
+## How it works
 
-- Rule-based mapping for file extensions / workspace patterns to encodings (e.g. `.log` → `windows-1252`).
-- BOM detection and heuristic analysis of raw bytes on file open.
-- Deterministic commands: `Detect Encoding`, `Apply Encoding`, `Fix Encoding`, `Prepare File`.
-- Safe modes: `manual`, `safe`, and `auto` to control how aggressive automatic fixes are.
+1. **XML declaration** — For any file that starts with `<?xml ... encoding="..."?>`, Encodex reads the declared encoding and warns you if VS Code opened the file with a different one.
+2. **Extension map** — You can explicitly bind a file extension to an encoding in settings. The explicit mapping always wins over the XML declaration.
+
+If neither applies, the extension stays silent.
+
+## Configuration
+
+Add entries to `encodex.extensionMap` in your user or workspace settings:
+
+```jsonc
+"encodex.extensionMap": {
+    ".csv":  "windows1252",
+    ".log":  "latin1"
+}
+```
+
+- Keys are file extensions including the leading dot (case-insensitive).
+- Values are VS Code encoding identifiers: `utf8`, `utf8bom`, `utf16le`, `utf16be`, `latin1`, `windows1252`, `iso88592`, `shiftjis`, etc.
+- The setting is **resource-scoped**: you can set different values per workspace folder.
+
+> Files with an `<?xml ... encoding="..."?>` declaration are handled automatically for all extensions — no mapping required.
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `Encodex: Detect Encoding` | Shows the byte-detected encoding, VS Code's current encoding, XML declaration (if any), and the configured expected encoding for the active file. |
+| `Encodex: Reopen with Encoding...` | Opens VS Code's built-in encoding picker to reopen the current file with a chosen encoding. |
+
+## Status bar
+
+A status bar item at the bottom right always shows the byte-level detected encoding of the active file. Click it to reopen the file with a different encoding.
+
+## Mismatch notification
+
+When a file is opened with the wrong encoding, a warning appears:
+
+> Encodex: 'file.csv' should be opened as 'windows1252'. Currently using 'utf8'. **[Reopen]** [Ignore]
+
+Clicking **Reopen** opens the VS Code encoding picker pre-focused on the expected encoding.
+

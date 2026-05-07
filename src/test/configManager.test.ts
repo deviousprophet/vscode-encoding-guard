@@ -33,13 +33,6 @@ suite('getExpectedEncoding', () => {
         assert.strictEqual(result, 'windows1252');
     });
 
-    test('returns "auto" when mapped to auto', async () => {
-        await setMap({ '.arxml': 'auto' });
-        const uri = vscode.Uri.file('/workspace/model.arxml');
-        const result = getExpectedEncoding(uri);
-        assert.strictEqual(result, 'auto');
-    });
-
     test('returns null for an extension not in the map', async () => {
         await setMap({ '.csv': 'windows1252' });
         const uri = vscode.Uri.file('/workspace/readme.txt');
@@ -52,13 +45,6 @@ suite('getExpectedEncoding', () => {
         const uri = vscode.Uri.file('/workspace/app.log');
         const result = getExpectedEncoding(uri);
         assert.strictEqual(result, 'utf8');
-    });
-
-    test('is case-insensitive for "auto" value', async () => {
-        await setMap({ '.xml': 'AUTO' });
-        const uri = vscode.Uri.file('/workspace/config.xml');
-        const result = getExpectedEncoding(uri);
-        assert.strictEqual(result, 'auto');
     });
 
     test('returns null for a file with no extension', async () => {

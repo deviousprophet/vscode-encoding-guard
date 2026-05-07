@@ -4,12 +4,11 @@ import { normalizeEncoding } from './normalizer';
 
 /**
  * Reads the `encodex.extensionMap` setting (resource-scoped) and returns the
- * configured expected encoding for the given URI.
+ * explicitly configured encoding for the given URI.
  *
- * Returns:
- *  - `"auto"` if the extension is mapped to "auto" (detect from XML declaration)
- *  - A normalized VS Code encoding identifier if a specific encoding is configured
- *  - `null` if the extension is not present in the map (no intervention)
+ * Returns a normalized VS Code encoding identifier, or `null` if the extension
+ * is not mapped. When `null` is returned, `applier.ts` falls through to XML
+ * declaration detection as the universal default.
  */
 export function getExpectedEncoding(uri: vscode.Uri): string | null {
     const cfg = vscode.workspace.getConfiguration('encodex', uri);
@@ -19,9 +18,7 @@ export function getExpectedEncoding(uri: vscode.Uri): string | null {
     if (!ext) { return null; }
 
     const value = extensionMap[ext];
-    if (value === undefined || value === null || value === '') { return null; }
-
-    if (value.trim().toLowerCase() === 'auto') { return 'auto'; }
+    if (!value || value.trim() === '') { return null; }
 
     return normalizeEncoding(value);
 }
