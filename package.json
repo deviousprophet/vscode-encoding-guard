@@ -20,11 +20,6 @@
         "category": "Encodex"
       },
       {
-        "command": "encodex.reopenWithEncoding",
-        "title": "Reopen with Encoding...",
-        "category": "Encodex"
-      },
-      {
         "command": "encodex.setExtensionEncoding",
         "title": "Set Extension Encoding...",
         "category": "Encodex"

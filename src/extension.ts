@@ -5,15 +5,9 @@ import { detectEncoding, detectXmlDeclaration } from './detector';
 import { getExpectedEncoding } from './configManager';
 import { normalizeEncoding } from './normalizer';
 import { handleDocumentOpen } from './applier';
-import { EncodexStatusBar } from './statusBar';
 import { pickEncoding } from './encodingList';
 
 export function activate(context: vscode.ExtensionContext) {
-    const statusBar = new EncodexStatusBar();
-    context.subscriptions.push(statusBar);
-
-    // Show encoding for the file that is already active on startup.
-    statusBar.update(vscode.window.activeTextEditor?.document);
 
     // encodex.detectEncoding — reports detected and configured encoding for the active file.
     context.subscriptions.push(
@@ -65,7 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
         }),
     );
 
-    // encodex.setExtensionEncoding — pick an encoding and store it in extensionMap for the file's extension.
+    // encodex.setExtensionEncoding
     context.subscriptions.push(
         vscode.commands.registerCommand('encodex.setExtensionEncoding', async (uri?: vscode.Uri) => {
             const targetUri = uri ?? vscode.window.activeTextEditor?.document.uri;
@@ -119,18 +113,10 @@ export function activate(context: vscode.ExtensionContext) {
         }),
     );
 
-    // On file open: check encoding and notify if there is a mismatch.
+    // On file open: check encoding and reopen with the correct one if needed.
     context.subscriptions.push(
         vscode.workspace.onDidOpenTextDocument(async (doc) => {
-            statusBar.update(doc);
             await handleDocumentOpen(doc);
-        }),
-    );
-
-    // On active editor change: update status bar.
-    context.subscriptions.push(
-        vscode.window.onDidChangeActiveTextEditor((editor) => {
-            statusBar.update(editor?.document);
         }),
     );
 }

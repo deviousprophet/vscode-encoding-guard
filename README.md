@@ -29,7 +29,6 @@ Or edit settings manually:
 }
 ```
 
-- Values are VS Code encoding identifiers: `utf8`, `utf8bom`, `utf16le`, `utf16be`, `iso88591`, `windows1252`, `iso88592`, `shiftjis`, etc.
 - Both settings are **resource-scoped**: you can set different values per workspace folder.
 
 > Files with an `<?xml ... encoding="..."?>` declaration are handled automatically — no mapping required.
@@ -43,16 +42,3 @@ Right-click any file in the Explorer or editor to access the **Encodex** submenu
 | **Set Extension Encoding...** | Pick an encoding and apply it to all files with this extension (`extensionMap`) |
 | **Set File Encoding...** | Pick an encoding and pin it to this specific file (`fileMap`) |
 | **Open Encodex Settings** | Open VS Code Settings filtered to Encodex |
-
-## Commands
-
-| Command | Description |
-|---|---|
-| `Encodex: Detect Encoding` | Shows the byte-detected encoding, VS Code's current encoding, XML declaration (if any), and the configured expected encoding for the active file. |
-| `Encodex: Reopen with Encoding...` | Opens VS Code's built-in encoding picker to reopen the current file with a chosen encoding. |
-
-## Status bar
-
-A status bar item at the bottom right always shows the byte-level detected encoding of the active file. Click it to reopen the file with a different encoding.
-
-

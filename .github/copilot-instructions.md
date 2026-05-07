@@ -6,7 +6,6 @@ Short summary
 - Users configure `encodex.extensionMap` (resource-scoped) to map file extensions to a VS Code encoding ID (e.g. `"utf8"`, `"windows1252"`), or `encodex.fileMap` to pin a specific file path to an encoding. For any file that contains an `<?xml ... encoding="..."?>` declaration in its header, the extension automatically detects and applies that encoding — no mapping required.
 - Priority order for encoding resolution: `fileMap` (per-file) → `extensionMap` (per-extension) → XML declaration → no action.
 - On every file open, the extension compares the expected encoding against what VS Code actually used (`doc.encoding`) and **silently reopens** the file with the correct encoding on mismatch — no user interaction required.
-- A status bar item always shows the byte-detected encoding of the active file; clicking it opens the VS Code encoding picker.
 
 Key files
 ---------
@@ -15,7 +14,6 @@ Key files
 - `src/encodingList.ts` — the canonical list of supported encodings as `QuickPickItem` entries; exports `pickEncoding(currentId?)` used by context-menu commands.
 - `src/configManager.ts` — resolves the expected encoding for a URI by checking `fileMap` first, then `extensionMap`; returns `null` when not mapped, which causes `applier.ts` to fall through to XML declaration detection.
 - `src/applier.ts` — orchestrates detection + config lookup + silent auto-reopen on mismatch. Exports `resolveTargetEncoding(uri, buf)` (used by tests) and `handleDocumentOpen(doc)` (wired to `onDidOpenTextDocument`).
-- `src/statusBar.ts` — status bar item (`EncodexStatusBar` class).
 - `src/extension.ts` — extension activation, command registration, event wiring.
 - `src/test/applier.test.ts` — integration tests for `resolveTargetEncoding` across all file types and the extensionMap config-wins-over-declaration rule.
 - `src/test/detector.test.ts` — unit + integration tests for `detector.ts` using files under `sample/`.
