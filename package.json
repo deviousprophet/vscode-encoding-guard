@@ -16,13 +16,66 @@
     "commands": [
       {
         "command": "encodex.detectEncoding",
-        "title": "Encodex: Detect Encoding"
+        "title": "Detect Encoding",
+        "category": "Encodex"
       },
       {
         "command": "encodex.reopenWithEncoding",
-        "title": "Encodex: Reopen with Encoding..."
+        "title": "Reopen with Encoding...",
+        "category": "Encodex"
+      },
+      {
+        "command": "encodex.setExtensionEncoding",
+        "title": "Set Extension Encoding...",
+        "category": "Encodex"
+      },
+      {
+        "command": "encodex.setFileEncoding",
+        "title": "Set File Encoding...",
+        "category": "Encodex"
+      },
+      {
+        "command": "encodex.openSettings",
+        "title": "Open Encodex Settings",
+        "category": "Encodex"
       }
     ],
+    "submenus": [
+      {
+        "id": "encodex/context",
+        "label": "Encodex"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "submenu": "encodex/context",
+          "group": "navigation@100",
+          "when": "resourceScheme == file"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "encodex/context",
+          "group": "navigation@100",
+          "when": "resourceScheme == file"
+        }
+      ],
+      "encodex/context": [
+        {
+          "command": "encodex.setExtensionEncoding",
+          "group": "1_config@1"
+        },
+        {
+          "command": "encodex.setFileEncoding",
+          "group": "1_config@2"
+        },
+        {
+          "command": "encodex.openSettings",
+          "group": "2_settings@1"
+        }
+      ]
+    },
     "configuration": {
       "title": "Encodex",
       "properties": {
@@ -30,6 +83,15 @@
           "type": "object",
           "scope": "resource",
           "description": "Map file extensions (with leading dot, e.g. \".csv\") to a VS Code encoding identifier (e.g. \"utf8\", \"windows1252\"). Files with an XML/ARXML encoding declaration (<?xml ... encoding=\"...\"?>) are handled automatically for all extensions even without a mapping.",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "encodex.fileMap": {
+          "type": "object",
+          "scope": "resource",
+          "description": "Map workspace-relative file paths to a VS Code encoding identifier. Takes priority over extensionMap and XML declarations.",
           "default": {},
           "additionalProperties": {
             "type": "string"
