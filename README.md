@@ -4,7 +4,7 @@ Encodex is a VS Code extension that automatically detects and applies the correc
 
 ## How it works
 
-1. **XML declaration** — For any file that starts with `<?xml ... encoding="..."?>`, Encodex reads the declared encoding and warns you if VS Code opened the file with a different one.
+1. **XML declaration** — For any file that starts with `<?xml ... encoding="..."?>`, Encodex reads the declared encoding and silently reopens the file with the correct encoding if VS Code opened it with a different one.
 2. **Extension map** — You can explicitly bind a file extension to an encoding in settings. The explicit mapping always wins over the XML declaration.
 
 If neither applies, the extension stays silent.
@@ -16,12 +16,12 @@ Add entries to `encodex.extensionMap` in your user or workspace settings:
 ```jsonc
 "encodex.extensionMap": {
     ".csv":  "windows1252",
-    ".log":  "latin1"
+    ".log":  "iso88591"
 }
 ```
 
 - Keys are file extensions including the leading dot (case-insensitive).
-- Values are VS Code encoding identifiers: `utf8`, `utf8bom`, `utf16le`, `utf16be`, `latin1`, `windows1252`, `iso88592`, `shiftjis`, etc.
+- Values are VS Code encoding identifiers: `utf8`, `utf8bom`, `utf16le`, `utf16be`, `iso88591`, `windows1252`, `iso88592`, `shiftjis`, etc.
 - The setting is **resource-scoped**: you can set different values per workspace folder.
 
 > Files with an `<?xml ... encoding="..."?>` declaration are handled automatically for all extensions — no mapping required.
@@ -37,11 +37,4 @@ Add entries to `encodex.extensionMap` in your user or workspace settings:
 
 A status bar item at the bottom right always shows the byte-level detected encoding of the active file. Click it to reopen the file with a different encoding.
 
-## Mismatch notification
-
-When a file is opened with the wrong encoding, a warning appears:
-
-> Encodex: 'file.csv' should be opened as 'windows1252'. Currently using 'utf8'. **[Reopen]** [Ignore]
-
-Clicking **Reopen** opens the VS Code encoding picker pre-focused on the expected encoding.
 
