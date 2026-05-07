@@ -6,6 +6,7 @@ import { getExpectedEncoding } from './configManager';
 import { normalizeEncoding } from './normalizer';
 import { handleDocumentOpen } from './applier';
 import { EncodexStatusBar } from './statusBar';
+import { pickEncoding } from './encodingList';
 
 export function activate(context: vscode.ExtensionContext) {
     const statusBar = new EncodexStatusBar();
@@ -61,6 +62,60 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('encodex.reopenWithEncoding', async () => {
             await vscode.commands.executeCommand('workbench.action.editor.reopenWithEncoding');
+        }),
+    );
+
+    // encodex.setExtensionEncoding — pick an encoding and store it in extensionMap for the file's extension.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('encodex.setExtensionEncoding', async (uri?: vscode.Uri) => {
+            const targetUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+            if (!targetUri || targetUri.scheme !== 'file') { return; }
+
+            const ext = path.extname(targetUri.fsPath).toLowerCase();
+            if (!ext) {
+                vscode.window.showWarningMessage('Encodex: This file has no extension.');
+                return;
+            }
+
+            const cfg = vscode.workspace.getConfiguration('encodex', targetUri);
+            const current = cfg.get<Record<string, string>>('extensionMap', {})[ext];
+            const chosen = await pickEncoding(current ? normalizeEncoding(current) : undefined);
+            if (!chosen) { return; }
+
+            const map = { ...cfg.get<Record<string, string>>('extensionMap', {}), [ext]: chosen };
+            await cfg.update('extensionMap', map, vscode.ConfigurationTarget.Workspace);
+            vscode.window.showInformationMessage(`Encodex: Set ${ext} → ${chosen}`);
+        }),
+    );
+
+    // encodex.setFileEncoding — pick an encoding and store it in fileMap for this specific file.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('encodex.setFileEncoding', async (uri?: vscode.Uri) => {
+            const targetUri = uri ?? vscode.window.activeTextEditor?.document.uri;
+            if (!targetUri || targetUri.scheme !== 'file') { return; }
+
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(targetUri);
+            if (!workspaceFolder) {
+                vscode.window.showWarningMessage('Encodex: File is not inside a workspace folder.');
+                return;
+            }
+
+            const relPath = path.relative(workspaceFolder.uri.fsPath, targetUri.fsPath).replace(/\\/g, '/');
+            const cfg = vscode.workspace.getConfiguration('encodex', targetUri);
+            const current = cfg.get<Record<string, string>>('fileMap', {})[relPath];
+            const chosen = await pickEncoding(current ? normalizeEncoding(current) : undefined);
+            if (!chosen) { return; }
+
+            const map = { ...cfg.get<Record<string, string>>('fileMap', {}), [relPath]: chosen };
+            await cfg.update('fileMap', map, vscode.ConfigurationTarget.Workspace);
+            vscode.window.showInformationMessage(`Encodex: Set ${relPath} → ${chosen}`);
+        }),
+    );
+
+    // encodex.openSettings — open Settings UI filtered to encodex.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('encodex.openSettings', async () => {
+            await vscode.commands.executeCommand('workbench.action.openSettings', 'encodex');
         }),
     );
 
