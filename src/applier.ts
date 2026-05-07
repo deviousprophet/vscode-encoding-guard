@@ -28,47 +28,44 @@ export function resolveTargetEncoding(uri: vscode.Uri, buf: Buffer): string | nu
  * encoding from config/declaration, and warns the user when VS Code opened the
  * file with a different encoding than expected.
  */
-export async function handleDocumentOpen(
-    doc: vscode.TextDocument,
-    out: vscode.OutputChannel,
-): Promise<void> {
+export async function handleDocumentOpen(doc: vscode.TextDocument): Promise<void> {
     if (doc.uri.scheme !== 'file' || doc.isUntitled) { return; }
 
     const fileName = path.basename(doc.uri.fsPath);
-    out.appendLine(`[open] ${fileName}`);
+    console.log(`[Encodex] open: ${fileName}`);
 
     try {
         let buf: Buffer;
         try {
             buf = fs.readFileSync(doc.uri.fsPath);
         } catch (err) {
-            out.appendLine(`  ! could not read file: ${err}`);
+            console.error(`[Encodex] could not read file: ${err}`);
             return;
         }
 
         const target = resolveTargetEncoding(doc.uri, buf);
-        out.appendLine(`  target encoding : ${target ?? '(none — no declaration or config)'}`);
+        console.log(`[Encodex] target encoding : ${target ?? '(none — no declaration or config)'}`);
         if (target === null) { return; }
 
         // doc.encoding is the VS Code encoding identifier used to decode this file.
         const rawEncoding: string | undefined = (doc as any).encoding;
         if (rawEncoding === undefined) {
-            out.appendLine('  ! doc.encoding is undefined — VS Code API not available, skipping');
+            console.warn('[Encodex] doc.encoding is undefined — VS Code API not available, skipping');
             return;
         }
         const current = normalizeEncoding(rawEncoding);
-        out.appendLine(`  current encoding: ${current} (raw: ${rawEncoding})`);
+        console.log(`[Encodex] current encoding: ${current} (raw: ${rawEncoding})`);
 
         if (current === target) {
-            out.appendLine('  ✓ already correct, no action needed');
+            console.log('[Encodex] ✓ already correct, no action needed');
             return;
         }
 
-        out.appendLine(`  ⚠ mismatch — prompting user to reopen as '${target}'`);
+        console.log(`[Encodex] ⚠ mismatch — prompting user to reopen as '${target}'`);
 
         const msg = `Encodex: '${fileName}' should be opened as '${target}'. Currently using '${current}'.`;
         const choice = await vscode.window.showWarningMessage(msg, `Reopen as ${target}`, 'Ignore');
-        out.appendLine(`  user chose: ${choice ?? '(dismissed)'}`);
+        console.log(`[Encodex] user chose: ${choice ?? '(dismissed)'}`);
 
         if (choice === `Reopen as ${target}`) {
             const configTarget = vscode.workspace.workspaceFolders?.length
@@ -82,12 +79,12 @@ export async function handleDocumentOpen(
             try {
                 await vscode.window.showTextDocument(doc.uri, { preview: false });
                 await vscode.commands.executeCommand('workbench.action.files.revert');
-                out.appendLine(`  ✓ reopened as '${target}'`);
+                console.log(`[Encodex] ✓ reopened as '${target}'`);
             } finally {
                 await filesConfig.update('encoding', prev, configTarget);
             }
         }
     } catch (err) {
-        out.appendLine(`  ! unexpected error: ${err}`);
+        console.error(`[Encodex] unexpected error: ${err}`);
     }
 }

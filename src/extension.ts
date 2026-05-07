@@ -8,9 +8,6 @@ import { handleDocumentOpen } from './applier';
 import { EncodexStatusBar } from './statusBar';
 
 export function activate(context: vscode.ExtensionContext) {
-    const out = vscode.window.createOutputChannel('Encodex');
-    context.subscriptions.push(out);
-
     const statusBar = new EncodexStatusBar();
     context.subscriptions.push(statusBar);
 
@@ -71,7 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.workspace.onDidOpenTextDocument(async (doc) => {
             statusBar.update(doc);
-            await handleDocumentOpen(doc, out);
+            await handleDocumentOpen(doc);
         }),
     );
 
