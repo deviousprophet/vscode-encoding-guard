@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1] — 2026-05-07
+
+### Fixed
+
+- **Context menu visibility** — Encoding Guard context menu now only appears when
+  right-clicking on files; it no longer appears on folders.
+
 ## [1.0.0] — 2026-05-07
 
 ### Added
@@ -20,7 +27,7 @@
   - *Set Encoding for Extension* — maps the file's extension to any encoding via a
     searchable QuickPick (all VS Code–supported encodings listed).
   - *Set Encoding for This File* — pins the exact file path to a chosen encoding.
-  - *Open EncodingGuard Settings* — navigates directly to the extension settings.
+  - *Open Encoding Guard Settings* — navigates directly to the extension settings.
 - **Encoding normalizer** — accepts common encoding name variants
   (`UTF-8`, `ISO-8859-1`, `windows-1252`, `cp1252`, `latin-1`, …) and maps them to
   canonical VS Code encoding identifiers.
