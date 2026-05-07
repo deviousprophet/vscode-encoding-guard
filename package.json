@@ -51,14 +51,14 @@
       "explorer/context": [
         {
           "submenu": "encoding-guard/context",
-          "group": "navigation@100",
-          "when": "resourceScheme == file"
+          "group": "encoding@1",
+          "when": "resourceScheme == file && !explorerResourceIsFolder"
         }
       ],
       "editor/context": [
         {
           "submenu": "encoding-guard/context",
-          "group": "navigation@100",
+          "group": "encoding@1",
           "when": "resourceScheme == file"
         }
       ],
