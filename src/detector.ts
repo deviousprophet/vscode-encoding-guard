@@ -34,11 +34,11 @@ export function detectXmlDeclaration(buf: Buffer): string | null {
 
     if (bom === 'utf16le') {
         // Skip the 2-byte BOM, then decode as UTF-16 LE.
-        const slice = buf.slice(2, Math.min(buf.length, 1024));
+        const slice = buf.subarray(2, Math.min(buf.length, 1024));
         header = slice.toString('utf16le');
     } else if (bom === 'utf16be') {
         // Skip the 2-byte BOM, swap byte pairs, then decode as UTF-16 LE.
-        const slice = buf.slice(2, Math.min(buf.length, 1024));
+        const slice = buf.subarray(2, Math.min(buf.length, 1024));
         const swapped = Buffer.alloc(slice.length & ~1); // round down to even
         for (let i = 0; i + 1 < slice.length; i += 2) {
             swapped[i]     = slice[i + 1];
@@ -48,7 +48,7 @@ export function detectXmlDeclaration(buf: Buffer): string | null {
     } else {
         // ASCII / UTF-8 / single-byte — the declaration is always in the ASCII
         // range so latin1 decoding is safe and avoids losing bytes.
-        header = buf.slice(0, Math.min(buf.length, 1024)).toString('latin1');
+        header = buf.subarray(0, Math.min(buf.length, 1024)).toString('latin1');
     }
 
     // Match:  <?xml  ...  encoding="UTF-8"  ?>  (single or double quotes)
