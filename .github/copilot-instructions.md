@@ -3,7 +3,8 @@
 Short summary
 -------------
 - TypeScript VS Code extension that automatically detects and applies file encodings so files open and save correctly in mixed-encoding projects.
-- Users configure `encodex.extensionMap` (resource-scoped) to map file extensions to a VS Code encoding ID (e.g. `"utf8"`, `"windows1252"`). For any file that contains an `<?xml ... encoding="..."?>` declaration in its header, the extension automatically detects and applies that encoding — no mapping required.
+- Users configure `encodex.extensionMap` (resource-scoped) to map file extensions to a VS Code encoding ID (e.g. `"utf8"`, `"windows1252"`), or `encodex.fileMap` to pin a specific file path to an encoding. For any file that contains an `<?xml ... encoding="..."?>` declaration in its header, the extension automatically detects and applies that encoding — no mapping required.
+- Priority order for encoding resolution: `fileMap` (per-file) → `extensionMap` (per-extension) → XML declaration → no action.
 - On every file open, the extension compares the expected encoding against what VS Code actually used (`doc.encoding`) and **silently reopens** the file with the correct encoding on mismatch — no user interaction required.
 - A status bar item always shows the byte-detected encoding of the active file; clicking it opens the VS Code encoding picker.
 
@@ -11,7 +12,8 @@ Key files
 ---------
 - `src/detector.ts` — encoding detection: BOM checks, XML declaration parsing, heuristic UTF-8 round-trip fallback.
 - `src/normalizer.ts` — maps encoding name variants (`UTF-8`, `ISO-8859-1`, `windows-1252`, `cp1252`, …) to canonical VS Code identifiers.
-- `src/configManager.ts` — reads `encodex.extensionMap` from configuration and resolves the explicit encoding for a given URI; returns `null` when not mapped, which causes `applier.ts` to fall through to XML declaration detection.
+- `src/encodingList.ts` — the canonical list of supported encodings as `QuickPickItem` entries; exports `pickEncoding(currentId?)` used by context-menu commands.
+- `src/configManager.ts` — resolves the expected encoding for a URI by checking `fileMap` first, then `extensionMap`; returns `null` when not mapped, which causes `applier.ts` to fall through to XML declaration detection.
 - `src/applier.ts` — orchestrates detection + config lookup + silent auto-reopen on mismatch. Exports `resolveTargetEncoding(uri, buf)` (used by tests) and `handleDocumentOpen(doc)` (wired to `onDidOpenTextDocument`).
 - `src/statusBar.ts` — status bar item (`EncodexStatusBar` class).
 - `src/extension.ts` — extension activation, command registration, event wiring.
@@ -38,7 +40,7 @@ Guidance for Copilot / automated agents
 
 Quick pointers
 --------------
-- `resolveTargetEncoding(uri, buf)` in `src/applier.ts` is the single coordination point: checks `extensionMap` first (wins), then falls back to `detectXmlDeclaration`.
+- `resolveTargetEncoding(uri, buf)` in `src/applier.ts` is the single coordination point: checks `fileMap` then `extensionMap` (via `configManager`), then falls back to `detectXmlDeclaration`.
 - The reopen mechanism in `handleDocumentOpen`: temporarily sets `files.encoding` to the target, calls `workbench.action.files.revert`, then restores the previous value in a `finally` block.
 - `detectEncoding(buffer)` in `src/detector.ts` is intentionally conservative — add tests for new heuristics.
 - `detectXmlDeclaration(buffer)` reads only the first 1 KB and handles UTF-16 (BOM-prefixed) files automatically.

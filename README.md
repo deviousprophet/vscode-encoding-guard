@@ -5,26 +5,44 @@ Encodex is a VS Code extension that automatically detects and applies the correc
 ## How it works
 
 1. **XML declaration** — For any file that starts with `<?xml ... encoding="..."?>`, Encodex reads the declared encoding and silently reopens the file with the correct encoding if VS Code opened it with a different one.
-2. **Extension map** — You can explicitly bind a file extension to an encoding in settings. The explicit mapping always wins over the XML declaration.
+2. **File map** — You can pin a specific file to an encoding. Takes priority over everything else.
+3. **Extension map** — You can bind a file extension to an encoding. Wins over XML declarations.
 
-If neither applies, the extension stays silent.
+Priority order: `fileMap` → `extensionMap` → XML declaration → no action.
 
 ## Configuration
 
-Add entries to `encodex.extensionMap` in your user or workspace settings:
+The easiest way to configure encodings is via the **right-click context menu** in the Explorer or editor — select **Encodex** → **Set Extension Encoding...** or **Set File Encoding...**.
+
+Or edit settings manually:
 
 ```jsonc
+// Map a file extension to an encoding (applies to all files with that extension)
 "encodex.extensionMap": {
     ".csv":  "windows1252",
     ".log":  "iso88591"
+},
+
+// Override encoding for a specific file (workspace-relative path, wins over extensionMap)
+"encodex.fileMap": {
+    "data/legacy-report.csv": "iso88591"
 }
 ```
 
-- Keys are file extensions including the leading dot (case-insensitive).
 - Values are VS Code encoding identifiers: `utf8`, `utf8bom`, `utf16le`, `utf16be`, `iso88591`, `windows1252`, `iso88592`, `shiftjis`, etc.
-- The setting is **resource-scoped**: you can set different values per workspace folder.
+- Both settings are **resource-scoped**: you can set different values per workspace folder.
 
-> Files with an `<?xml ... encoding="..."?>` declaration are handled automatically for all extensions — no mapping required.
+> Files with an `<?xml ... encoding="..."?>` declaration are handled automatically — no mapping required.
+
+## Context menu
+
+Right-click any file in the Explorer or editor to access the **Encodex** submenu:
+
+| Item | Action |
+|---|---|
+| **Set Extension Encoding...** | Pick an encoding and apply it to all files with this extension (`extensionMap`) |
+| **Set File Encoding...** | Pick an encoding and pin it to this specific file (`fileMap`) |
+| **Open Encodex Settings** | Open VS Code Settings filtered to Encodex |
 
 ## Commands
 
