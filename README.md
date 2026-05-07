@@ -42,3 +42,9 @@ Right-click any file in the Explorer or editor to access the **Encoding Guard** 
 | **Set Extension Encoding...** | Pick an encoding and apply it to all files with this extension (`extensionMap`) |
 | **Set File Encoding...** | Pick an encoding and pin it to this specific file (`fileMap`) |
 | **Open Encoding Guard Settings** | Open VS Code Settings filtered to Encoding Guard |
+
+## Issues
+
+Found a bug or want to request a feature? Please open an issue: [Issues](https://github.com/deviousprophet/vscode-encoding-guard/issues)
+
+Include a short description, steps to reproduce, and sample files when possible.
