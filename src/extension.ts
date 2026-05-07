@@ -1,76 +1,85 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { detectEncoding } from './encoding';
-import { matchRuleForPath } from './rules';
+import * as path from 'path';
+import { detectEncoding, detectXmlDeclaration } from './detector';
+import { getExpectedEncoding } from './configManager';
+import { normalizeEncoding } from './normalizer';
+import { handleDocumentOpen } from './applier';
+import { EncodexStatusBar } from './statusBar';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+    const statusBar = new EncodexStatusBar();
+    context.subscriptions.push(statusBar);
 
-	console.log('Congratulations, your extension "vscode-encodex" is now active!');
+    // Show encoding for the file that is already active on startup.
+    statusBar.update(vscode.window.activeTextEditor?.document);
 
-	// Encodex activation complete
+    // encodex.detectEncoding — reports detected and configured encoding for the active file.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('encodex.detectEncoding', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showInformationMessage('Encodex: No active text editor.');
+                return;
+            }
+            const doc = editor.document;
+            if (doc.uri.scheme !== 'file') {
+                vscode.window.showInformationMessage('Encodex: Not a file on disk.');
+                return;
+            }
 
-	const detectAndSuggest = vscode.commands.registerCommand('encodex.detectAndSuggest', async () => {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) { return vscode.window.showInformationMessage('No active editor'); }
-		await handleDocument(editor.document, { interactive: true });
-	});
+            let detected = 'unknown';
+            let xmlDecl: string | null = null;
+            try {
+                const buf = fs.readFileSync(doc.uri.fsPath);
+                detected = detectEncoding(buf);
+                xmlDecl = detectXmlDeclaration(buf);
+            } catch {
+                // unreadable — fall through with defaults
+            }
 
-	const openEncodingMenu = vscode.commands.registerCommand('encodex.openEncodingMenu', async () => {
-		// show the built-in change encoding UI
-		await vscode.commands.executeCommand('workbench.action.editor.changeEncoding');
-	});
+            const configured = getExpectedEncoding(doc.uri);
+            const current = normalizeEncoding(doc.encoding);
 
-	context.subscriptions.push(detectAndSuggest, openEncodingMenu);
+            const lines: string[] = [
+                `File: ${path.basename(doc.uri.fsPath)}`,
+                `Detected (bytes): ${detected}`,
+                `VS Code current:  ${current}`,
+            ];
+            if (xmlDecl) {
+                lines.push(`XML declaration:  ${xmlDecl}`);
+            }
+            if (configured && configured !== 'auto') {
+                lines.push(`Config expects:   ${configured}`);
+            } else if (configured === 'auto') {
+                lines.push(`Config expects:   auto (from XML declaration)`);
+            }
 
-	// Listen for documents being opened so we can apply rules
-	const openListener = vscode.workspace.onDidOpenTextDocument(async (doc) => {
-		// only handle file scheme documents
-		if (doc.uri.scheme !== 'file' || doc.isUntitled) { return; }
-		const cfg = vscode.workspace.getConfiguration('encodex');
-		const mode = cfg.get<string>('mode', 'manual');
-		const autoApply = cfg.get<boolean>('autoApply', false);
-		await handleDocument(doc, { interactive: mode !== 'auto', autoApply: autoApply, mode });
-	});
+            vscode.window.showInformationMessage(lines.join('\n'), { modal: true });
+        }),
+    );
 
-	context.subscriptions.push(openListener);
-}
+    // encodex.reopenWithEncoding — delegates to VS Code's built-in picker.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('encodex.reopenWithEncoding', async () => {
+            await vscode.commands.executeCommand('workbench.action.editor.reopenWithEncoding');
+        }),
+    );
 
-async function handleDocument(doc: vscode.TextDocument, opts: { interactive?: boolean; autoApply?: boolean; mode?: string } = {}) {
-	try {
-		const rule = matchRuleForPath(doc.uri.fsPath);
-		if (!rule) { return; } // no rule configured
+    // On file open: check encoding and notify if there is a mismatch.
+    context.subscriptions.push(
+        vscode.workspace.onDidOpenTextDocument(async (doc) => {
+            statusBar.update(doc);
+            await handleDocumentOpen(doc);
+        }),
+    );
 
-		const buf = fs.readFileSync(doc.uri.fsPath);
-		const detected = detectEncoding(buf);
-		const expected = rule.encoding;
-		if (!expected) { return; }
-		if (detected === expected) { return; }
-
-		const message = `Encodex: detected '${detected}' but rule expects '${expected}' for this file.`;
-		const cfgMode = opts.mode || vscode.workspace.getConfiguration('encodex').get<string>('mode', 'manual');
-
-		if (cfgMode === 'auto' && opts.autoApply) {
-			// auto mode requested: open the change encoding UI so user can pick the expected encoding
-			await vscode.commands.executeCommand('workbench.action.editor.changeEncoding');
-			return;
-		}
-
-		if (opts.interactive) {
-			const choice = await vscode.window.showWarningMessage(message, 'Change Encoding', 'Ignore');
-			if (choice === 'Change Encoding') {
-				await vscode.commands.executeCommand('workbench.action.editor.changeEncoding');
-			}
-		} else {
-			// non-interactive: log a message to the user (no popup)
-			console.log(message);
-		}
-	} catch (e) {
-		console.error('encodex: error handling document', e);
-	}
+    // On active editor change: update status bar.
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor((editor) => {
+            statusBar.update(editor?.document);
+        }),
+    );
 }
 
 export function deactivate() { }

@@ -1,6 +1,7 @@
 {
   "name": "vscode-encodex",
   "displayName": "Encodex",
+  "publisher": "deviousprophet",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -14,33 +15,25 @@
   "contributes": {
     "commands": [
       {
-        "command": "encodex.detectAndSuggest",
-        "title": "Encodex: Detect and Suggest Encoding"
+        "command": "encodex.detectEncoding",
+        "title": "Encodex: Detect Encoding"
       },
       {
-        "command": "encodex.openEncodingMenu",
-        "title": "Encodex: Open Change Encoding Menu"
+        "command": "encodex.reopenWithEncoding",
+        "title": "Encodex: Reopen with Encoding..."
       }
-    ]
-    ,
+    ],
     "configuration": {
       "title": "Encodex",
       "properties": {
-        "encodex.rules": {
-          "type": "array",
-          "description": "List of rules mapping file globs to encodings. Each entry should be an object with 'glob' and 'encoding' properties.",
-          "default": []
-        },
-        "encodex.mode": {
-          "type": "string",
-          "description": "Operation mode for automatic encoding actions: manual, safe, or auto.",
-          "default": "manual",
-          "enum": ["manual", "safe", "auto"]
-        },
-        "encodex.autoApply": {
-          "type": "boolean",
-          "description": "When true and mode is 'auto', attempt to open the change-encoding UI automatically when a mismatch is detected.",
-          "default": false
+        "encodex.extensionMap": {
+          "type": "object",
+          "scope": "resource",
+          "description": "Map file extensions (with leading dot, e.g. \".arxml\") to a VS Code encoding identifier (e.g. \"utf8\", \"windows1252\") or \"auto\" to detect from the XML/ARXML declaration header.",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     }
