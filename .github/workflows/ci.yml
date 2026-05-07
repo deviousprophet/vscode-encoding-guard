@@ -1,0 +1,19 @@
+name: CI Workflow
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  CT_After_Commit:
+    name: Test After Commit
+    uses: ./.github/workflows/ct.yml
+
+  Package:
+    name: Package VSIX
+    needs: CT_After_Commit
+    if: ${{ needs.CT_After_Commit.result == 'success' }}
+    uses: ./.github/workflows/package.yml

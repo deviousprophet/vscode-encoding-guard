@@ -1,0 +1,130 @@
+{
+  "name": "vscode-encoding-guard",
+  "displayName": "Encoding Guard",
+  "publisher": "deviousprophet",
+  "description": "Protects you from wrong encodings — Automatically detects and applies the correct file encoding on open.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deviousprophet/vscode-encoding-guard"
+  },
+  "engines": {
+    "vscode": "^1.110.0"
+  },
+  "icon": "images/icon.png",
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "encoding-guard.detectEncoding",
+        "title": "Detect Encoding",
+        "category": "Encoding Guard"
+      },
+      {
+        "command": "encoding-guard.setExtensionEncoding",
+        "title": "Set Extension Encoding...",
+        "category": "Encoding Guard"
+      },
+      {
+        "command": "encoding-guard.setFileEncoding",
+        "title": "Set File Encoding...",
+        "category": "Encoding Guard"
+      },
+      {
+        "command": "encoding-guard.openSettings",
+        "title": "Open Encoding Guard Settings",
+        "category": "Encoding Guard"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "encoding-guard/context",
+        "label": "Encoding Guard"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "submenu": "encoding-guard/context",
+          "group": "navigation@100",
+          "when": "resourceScheme == file"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "encoding-guard/context",
+          "group": "navigation@100",
+          "when": "resourceScheme == file"
+        }
+      ],
+      "encoding-guard/context": [
+        {
+          "command": "encoding-guard.setExtensionEncoding",
+          "group": "1_config@1"
+        },
+        {
+          "command": "encoding-guard.setFileEncoding",
+          "group": "1_config@2"
+        },
+        {
+          "command": "encoding-guard.openSettings",
+          "group": "2_settings@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Encoding Guard",
+      "properties": {
+        "encoding-guard.extensionMap": {
+          "type": "object",
+          "scope": "resource",
+          "description": "Map file extensions (with leading dot, e.g. \".csv\") to a VS Code encoding identifier (e.g. \"utf8\", \"windows1252\"). Files with an XML/ARXML encoding declaration (<?xml ... encoding=\"...\"?>) are handled automatically for all extensions even without a mapping.",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "encoding-guard.fileMap": {
+          "type": "object",
+          "scope": "resource",
+          "description": "Map workspace-relative file paths to a VS Code encoding identifier. Takes priority over extensionMap and XML declarations.",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.103.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "typescript-eslint": "^8.48.1",
+    "eslint": "^9.39.1",
+    "esbuild": "^0.27.1",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.9.3",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}
