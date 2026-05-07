@@ -7,7 +7,7 @@ import { normalizeEncoding } from './normalizer';
 
 /**
  * Determines what encoding a file *should* be opened with, based on:
- *  1. Explicit `encodex.extensionMap` entry for the file's extension (wins).
+ *  1. Explicit `encoding-guard.extensionMap` entry for the file's extension (wins).
  *  2. Fallback for any file: check for an XML/ARXML encoding declaration
  *     (<?xml version="1.0" encoding="..."?>) in the first 1 KB of the file.
  *
@@ -35,7 +35,7 @@ async function reopenWithEncoding(uri: vscode.Uri, target: string): Promise<void
     try {
         await vscode.window.showTextDocument(uri, { preview: false });
         await vscode.commands.executeCommand('workbench.action.files.revert');
-        console.log(`[Encodex] ✓ reopened as '${target}'`);
+        console.log(`[Encoding Guard] ✓ reopened as '${target}'`);
     } finally {
         await filesConfig.update('encoding', prev, vscode.ConfigurationTarget.Global);
     }
@@ -49,39 +49,39 @@ async function reopenWithEncoding(uri: vscode.Uri, target: string): Promise<void
 export async function handleDocumentOpen(doc: vscode.TextDocument): Promise<void> {
     if (doc.uri.scheme !== 'file' || doc.isUntitled) { return; }
 
-    console.log(`[Encodex] open: ${path.basename(doc.uri.fsPath)}`);
+    console.log(`[Encoding Guard] open: ${path.basename(doc.uri.fsPath)}`);
 
     let buf: Buffer;
     try {
         buf = fs.readFileSync(doc.uri.fsPath);
     } catch (err) {
-        console.error(`[Encodex] could not read file: ${err}`);
+        console.error(`[Encoding Guard] could not read file: ${err}`);
         return;
     }
 
     try {
         const target = resolveTargetEncoding(doc.uri, buf);
-        console.log(`[Encodex] target encoding : ${target ?? '(none — no declaration or config)'}`);
+        console.log(`[Encoding Guard] target encoding : ${target ?? '(none — no declaration or config)'}`);
         if (target === null) { return; }
 
         // doc.encoding is an undocumented but stable VS Code API property.
         const rawEncoding: string | undefined = (doc as any).encoding;
         if (rawEncoding === undefined) {
-            console.warn('[Encodex] doc.encoding unavailable — skipping');
+            console.warn('[Encoding Guard] doc.encoding unavailable — skipping');
             return;
         }
 
         const current = normalizeEncoding(rawEncoding);
-        console.log(`[Encodex] current encoding: ${current} (raw: ${rawEncoding})`);
+        console.log(`[Encoding Guard] current encoding: ${current} (raw: ${rawEncoding})`);
 
         if (current === target) {
-            console.log('[Encodex] ✓ already correct, no action needed');
+            console.log('[Encoding Guard] ✓ already correct, no action needed');
             return;
         }
 
-        console.log(`[Encodex] ⚠ mismatch — reopening as '${target}'`);
+        console.log(`[Encoding Guard] ⚠ mismatch — reopening as '${target}'`);
         await reopenWithEncoding(doc.uri, target);
     } catch (err) {
-        console.error(`[Encodex] unexpected error: ${err}`);
+        console.error(`[Encoding Guard] unexpected error: ${err}`);
     }
 }

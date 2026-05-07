@@ -1,9 +1,9 @@
-# Copilot repository instructions — vscode-encodex
+# Copilot repository instructions — vscode-encoding-guard
 
 Short summary
 -------------
 - TypeScript VS Code extension that automatically detects and applies file encodings so files open and save correctly in mixed-encoding projects.
-- Users configure `encodex.extensionMap` (resource-scoped) to map file extensions to a VS Code encoding ID (e.g. `"utf8"`, `"windows1252"`), or `encodex.fileMap` to pin a specific file path to an encoding. For any file that contains an `<?xml ... encoding="..."?>` declaration in its header, the extension automatically detects and applies that encoding — no mapping required.
+- Users configure `encoding-guard.extensionMap` (resource-scoped) to map file extensions to a VS Code encoding ID (e.g. `"utf8"`, `"windows1252"`), or `encoding-guard.fileMap` to pin a specific file path to an encoding. For any file that contains an `<?xml ... encoding="..."?>` declaration in its header, the extension automatically detects and applies that encoding — no mapping required.
 - Priority order for encoding resolution: `fileMap` (per-file) → `extensionMap` (per-extension) → XML declaration → no action.
 - On every file open, the extension compares the expected encoding against what VS Code actually used (`doc.encoding`) and **silently reopens** the file with the correct encoding on mismatch — no user interaction required.
 

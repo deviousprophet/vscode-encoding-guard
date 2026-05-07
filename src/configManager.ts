@@ -3,18 +3,18 @@ import * as path from 'path';
 import { normalizeEncoding } from './normalizer';
 
 /**
- * Reads Encodex configuration for the given URI and returns the explicitly
+ * Reads Encoding Guard configuration for the given URI and returns the explicitly
  * configured encoding, applying this priority order:
  *
- *  1. `encodex.fileMap`      — per-file path override (wins over everything)
- *  2. `encodex.extensionMap` — per-extension override
+ *  1. `encoding-guard.fileMap`      — per-file path override (wins over everything)
+ *  2. `encoding-guard.extensionMap` — per-extension override
  *
  * Returns a normalized VS Code encoding identifier, or `null` if neither map
  * has an entry. When `null` is returned, `applier.ts` falls through to XML
  * declaration detection.
  */
 export function getExpectedEncoding(uri: vscode.Uri): string | null {
-    const cfg = vscode.workspace.getConfiguration('encodex', uri);
+    const cfg = vscode.workspace.getConfiguration('encoding-guard', uri);
 
     // 1. Per-file override
     const fileMap = cfg.get<Record<string, string>>('fileMap', {});

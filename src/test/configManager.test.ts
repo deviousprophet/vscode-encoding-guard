@@ -6,7 +6,7 @@ suite('getExpectedEncoding', () => {
     // These tests rely on whatever is set in workspace/user settings.
     // We reset the relevant key before each run to ensure a clean state.
 
-    const cfg = () => vscode.workspace.getConfiguration('encodex');
+    const cfg = () => vscode.workspace.getConfiguration('encoding-guard');
 
     async function setMap(map: Record<string, string>): Promise<void> {
         await cfg().update('extensionMap', map, vscode.ConfigurationTarget.Global);

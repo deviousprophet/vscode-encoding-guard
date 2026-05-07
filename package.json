@@ -1,13 +1,13 @@
 {
-  "name": "vscode-encodex",
-  "displayName": "Encodex",
+  "name": "vscode-encoding-guard",
+  "displayName": "Encoding Guard",
   "publisher": "deviousprophet",
-  "description": "Automatically detects and applies the correct file encoding on open — supports XML declarations, per-extension and per-file mapping.",
+  "description": "Protects you from wrong encodings — Automatically detects and applies the correct file encoding on open.",
   "version": "1.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/deviousprophet/vscode-encodex"
+    "url": "https://github.com/deviousprophet/vscode-encoding-guard"
   },
   "engines": {
     "vscode": "^1.110.0"
@@ -21,66 +21,66 @@
   "contributes": {
     "commands": [
       {
-        "command": "encodex.detectEncoding",
+        "command": "encoding-guard.detectEncoding",
         "title": "Detect Encoding",
-        "category": "Encodex"
+        "category": "Encoding Guard"
       },
       {
-        "command": "encodex.setExtensionEncoding",
+        "command": "encoding-guard.setExtensionEncoding",
         "title": "Set Extension Encoding...",
-        "category": "Encodex"
+        "category": "Encoding Guard"
       },
       {
-        "command": "encodex.setFileEncoding",
+        "command": "encoding-guard.setFileEncoding",
         "title": "Set File Encoding...",
-        "category": "Encodex"
+        "category": "Encoding Guard"
       },
       {
-        "command": "encodex.openSettings",
-        "title": "Open Encodex Settings",
-        "category": "Encodex"
+        "command": "encoding-guard.openSettings",
+        "title": "Open Encoding Guard Settings",
+        "category": "Encoding Guard"
       }
     ],
     "submenus": [
       {
-        "id": "encodex/context",
-        "label": "Encodex"
+        "id": "encoding-guard/context",
+        "label": "Encoding Guard"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "submenu": "encodex/context",
+          "submenu": "encoding-guard/context",
           "group": "navigation@100",
           "when": "resourceScheme == file"
         }
       ],
       "editor/context": [
         {
-          "submenu": "encodex/context",
+          "submenu": "encoding-guard/context",
           "group": "navigation@100",
           "when": "resourceScheme == file"
         }
       ],
-      "encodex/context": [
+      "encoding-guard/context": [
         {
-          "command": "encodex.setExtensionEncoding",
+          "command": "encoding-guard.setExtensionEncoding",
           "group": "1_config@1"
         },
         {
-          "command": "encodex.setFileEncoding",
+          "command": "encoding-guard.setFileEncoding",
           "group": "1_config@2"
         },
         {
-          "command": "encodex.openSettings",
+          "command": "encoding-guard.openSettings",
           "group": "2_settings@1"
         }
       ]
     },
     "configuration": {
-      "title": "Encodex",
+      "title": "Encoding Guard",
       "properties": {
-        "encodex.extensionMap": {
+        "encoding-guard.extensionMap": {
           "type": "object",
           "scope": "resource",
           "description": "Map file extensions (with leading dot, e.g. \".csv\") to a VS Code encoding identifier (e.g. \"utf8\", \"windows1252\"). Files with an XML/ARXML encoding declaration (<?xml ... encoding=\"...\"?>) are handled automatically for all extensions even without a mapping.",
@@ -89,7 +89,7 @@
             "type": "string"
           }
         },
-        "encodex.fileMap": {
+        "encoding-guard.fileMap": {
           "type": "object",
           "scope": "resource",
           "description": "Map workspace-relative file paths to a VS Code encoding identifier. Takes priority over extensionMap and XML declarations.",

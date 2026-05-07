@@ -5,7 +5,7 @@ export interface EncodingItem extends vscode.QuickPickItem {
 }
 
 /**
- * All encodings supported by Encodex, suitable for display in a QuickPick.
+ * All encodings supported by Encoding Guard, suitable for display in a QuickPick.
  * Labels mirror the names shown in VS Code's own encoding picker.
  */
 export const ENCODING_LIST: EncodingItem[] = [

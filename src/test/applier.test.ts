@@ -50,7 +50,7 @@ suite('resolveTargetEncoding', () => {
     });
 
     test('extensionMap config wins over XML declaration', async () => {
-        const cfg = vscode.workspace.getConfiguration('encodex');
+        const cfg = vscode.workspace.getConfiguration('encoding-guard');
         await cfg.update('extensionMap', { '.txt': 'utf8' }, vscode.ConfigurationTarget.Global);
         try {
             const file = path.join(SAMPLE, 'xml-decl.txt');
