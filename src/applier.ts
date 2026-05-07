@@ -48,8 +48,21 @@ export async function handleDocumentOpen(doc: vscode.TextDocument): Promise<void
     const fileName = path.basename(doc.uri.fsPath);
     const msg = `Encodex: '${fileName}' should be opened as '${target}'. Currently using '${current}'.`;
 
-    const choice = await vscode.window.showWarningMessage(msg, 'Reopen', 'Ignore');
-    if (choice === 'Reopen') {
-        await vscode.commands.executeCommand('workbench.action.editor.reopenWithEncoding');
+    const choice = await vscode.window.showWarningMessage(msg, `Reopen as ${target}`, 'Ignore');
+    if (choice === `Reopen as ${target}`) {
+        const configTarget = vscode.workspace.workspaceFolders?.length
+            ? vscode.ConfigurationTarget.Workspace
+            : vscode.ConfigurationTarget.Global;
+        const filesConfig = vscode.workspace.getConfiguration('files');
+        const prev = configTarget === vscode.ConfigurationTarget.Workspace
+            ? filesConfig.inspect<string>('encoding')?.workspaceValue
+            : filesConfig.inspect<string>('encoding')?.globalValue;
+        await filesConfig.update('encoding', target, configTarget);
+        try {
+            await vscode.window.showTextDocument(doc.uri, { preview: false });
+            await vscode.commands.executeCommand('workbench.action.files.revert');
+        } finally {
+            await filesConfig.update('encoding', prev, configTarget);
+        }
     }
 }

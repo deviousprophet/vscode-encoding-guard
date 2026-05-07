@@ -79,6 +79,45 @@ suite('detectXmlDeclaration', () => {
         // "utf-16" normalizes to 'utf16le'
         assert.strictEqual(detectXmlDeclaration(buf), 'utf16le');
     });
+
+    // --- edge cases ---
+
+    test('non-.xml file (.txt) with ISO-8859-1 declaration returns latin1', () => {
+        // xml-decl.txt is a .txt file that starts with <?xml encoding="ISO-8859-1"?>
+        const buf = fs.readFileSync(path.join(SAMPLE, 'xml-decl.txt'));
+        assert.strictEqual(detectXmlDeclaration(buf), 'latin1');
+    });
+
+    test('non-.xml file (.csv) with windows-1252 declaration returns windows1252', () => {
+        // xml-decl.csv is a .csv file that starts with <?xml encoding="windows-1252"?>
+        const buf = fs.readFileSync(path.join(SAMPLE, 'xml-decl.csv'));
+        assert.strictEqual(detectXmlDeclaration(buf), 'windows1252');
+    });
+
+    test('windows1252-decl.xml returns windows1252', () => {
+        const buf = fs.readFileSync(path.join(SAMPLE, 'windows1252-decl.xml'));
+        assert.strictEqual(detectXmlDeclaration(buf), 'windows1252');
+    });
+
+    test('XML with <?xml version="1.0"?> but no encoding attribute returns null', () => {
+        const buf = fs.readFileSync(path.join(SAMPLE, 'xml-decl-no-enc.xml'));
+        assert.strictEqual(detectXmlDeclaration(buf), null);
+    });
+
+    test('declaration placed beyond 1 KB is not detected (returns null)', () => {
+        // Pad 1025 bytes of whitespace before the declaration so it falls outside the window
+        const padding = Buffer.alloc(1025, 0x20); // spaces
+        const decl = Buffer.from('<?xml version="1.0" encoding="UTF-8"?>', 'utf8');
+        const buf = Buffer.concat([padding, decl]);
+        assert.strictEqual(detectXmlDeclaration(buf), null);
+    });
+
+    test('truncated buffer (cuts off inside encoding attribute) does not throw', () => {
+        // Simulate a partial read that ends mid-declaration
+        const partial = Buffer.from('<?xml version="1.0" encoding="ISO', 'utf8');
+        assert.doesNotThrow(() => detectXmlDeclaration(partial));
+        assert.strictEqual(detectXmlDeclaration(partial), null);
+    });
 });
 
 suite('detectEncoding (heuristic)', () => {
