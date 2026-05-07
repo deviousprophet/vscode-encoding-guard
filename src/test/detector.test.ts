@@ -41,7 +41,7 @@ suite('detectXmlDeclaration', () => {
 
     test('parses ISO-8859-1 declaration from sample file', () => {
         const buf = fs.readFileSync(path.join(SAMPLE, 'iso88591-decl.xml'));
-        assert.strictEqual(detectXmlDeclaration(buf), 'latin1');
+        assert.strictEqual(detectXmlDeclaration(buf), 'iso88591');
     });
 
     test('parses UTF-8 declaration from ARXML sample', () => {
@@ -67,7 +67,7 @@ suite('detectXmlDeclaration', () => {
 
     test('handles single-quoted encoding attribute', () => {
         const buf = Buffer.from("<?xml version='1.0' encoding='ISO-8859-1'?><r/>", 'utf8');
-        assert.strictEqual(detectXmlDeclaration(buf), 'latin1');
+        assert.strictEqual(detectXmlDeclaration(buf), 'iso88591');
     });
 
     test('parses UTF-16 LE file (BOM + declaration)', () => {
@@ -82,10 +82,10 @@ suite('detectXmlDeclaration', () => {
 
     // --- edge cases ---
 
-    test('non-.xml file (.txt) with ISO-8859-1 declaration returns latin1', () => {
+    test('non-.xml file (.txt) with ISO-8859-1 declaration returns iso88591', () => {
         // xml-decl.txt is a .txt file that starts with <?xml encoding="ISO-8859-1"?>
         const buf = fs.readFileSync(path.join(SAMPLE, 'xml-decl.txt'));
-        assert.strictEqual(detectXmlDeclaration(buf), 'latin1');
+        assert.strictEqual(detectXmlDeclaration(buf), 'iso88591');
     });
 
     test('non-.xml file (.csv) with windows-1252 declaration returns windows1252', () => {
