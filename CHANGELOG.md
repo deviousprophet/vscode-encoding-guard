@@ -14,10 +14,6 @@
 
 ### Improved
 
-- **Large-file XML declaration handling** — XML declaration detection now uses a
-  larger header scan window and a progressive content-based probe so large files
-  with XML preambles are handled more reliably without relying on fixed extension
-  allowlists.
 - **XML preamble probing** — added byte-level preamble detection to decide when to
   widen scanning for declaration parsing while keeping the common path lightweight.
 
