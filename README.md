@@ -4,11 +4,13 @@ Encoding Guard is a VS Code extension that automatically detects and applies the
 
 ## How it works
 
-1. **XML declaration** — For any file that starts with `<?xml ... encoding="..."?>`, Encoding Guard reads the declared encoding and silently reopens the file with the correct encoding if VS Code opened it with a different one.
-2. **File map** — You can pin a specific file to an encoding. Takes priority over everything else.
-3. **Extension map** — You can bind a file extension to an encoding. Wins over XML declarations.
+1. **Pattern matching** — Map file patterns to encodings via `encoding-guard.patternMap`. Patterns are matched by specificity:
+   - **Exact paths** (e.g., `data/report.csv`) — highest priority, specific file overrides
+   - **Glob patterns** (e.g., `src/**/*.xml`, `**/*.csv`) — medium priority, more specific globs win over less specific
+   - **Extension shorthand** (e.g., `.csv`) — lowest priority, acts as default for all matching extensions
+2. **XML declaration** — For any file that starts with `<?xml ... encoding="..."?>`, Encoding Guard reads the declared encoding and silently reopens the file with the correct encoding if VS Code opened it with a different one.
 
-Priority order: `fileMap` → `extensionMap` → XML declaration → no action.
+Priority order: `patternMap` (by specificity) → XML declaration → no action.
 
 ## Configuration
 
@@ -17,19 +19,17 @@ The easiest way to configure encodings is via the **right-click context menu** i
 Or edit settings manually:
 
 ```jsonc
-// Map a file extension to an encoding (applies to all files with that extension)
-"encoding-guard.extensionMap": {
-    ".csv":  "windows1252",
-    ".log":  "iso88591"
-},
-
-// Override encoding for a specific file (workspace-relative path, wins over extensionMap)
-"encoding-guard.fileMap": {
-    "data/legacy-report.csv": "iso88591"
+// Unified pattern map: exact paths, globs, or extension shorthand
+// Patterns are matched by specificity: exact paths > globs (more specific first) > extensions
+"encoding-guard.patternMap": {
+    ".csv":                    "windows1252",     // Default: all .csv files
+    "**/*.arxml":              "utf8",            // All .arxml files across directories
+    "data/legacy/**/*.txt":    "iso88591",        // Specific subdirectory
+    "config/old-report.csv":   "cp1252"           // Override: this specific file
 }
 ```
 
-- Both settings are **resource-scoped**: you can set different values per workspace folder.
+- Settings are **resource-scoped**: you can set different values per workspace folder.
 
 > Files with an `<?xml ... encoding="..."?>` declaration are handled automatically — no mapping required.
 
@@ -39,8 +39,8 @@ Right-click any file in the Explorer or editor to access the **Encoding Guard** 
 
 | Item | Action |
 |---|---|
-| **Set Extension Encoding...** | Pick an encoding and apply it to all files with this extension (`extensionMap`) |
-| **Set File Encoding...** | Pick an encoding and pin it to this specific file (`fileMap`) |
+| **Set Extension Encoding...** | Pick an encoding and apply it to all files with this extension (adds `.ext` to `patternMap`) |
+| **Set File Encoding...** | Pick an encoding and pin it to this specific file (adds exact path to `patternMap`) |
 | **Open Encoding Guard Settings** | Open VS Code Settings filtered to Encoding Guard |
 
 ## Issues

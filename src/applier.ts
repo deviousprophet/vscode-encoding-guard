@@ -1,18 +1,20 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { detectXmlDeclaration } from './detector';
+import { detectXmlDeclaration, startsWithXmlPreamble, XML_DECLARATION_SCAN_BYTES } from './detector';
 import { getExpectedEncoding } from './configManager';
 import { normalizeEncoding } from './normalizer';
 
+const INITIAL_SCAN_BYTES = 4 * 1024;
+
 /**
  * Determines what encoding a file *should* be opened with, based on:
- *  1. Explicit `encoding-guard.extensionMap` entry for the file's extension (wins).
+ *  1. Explicit config via `encoding-guard.patternMap` (glob/exact/extension patterns)
  *  2. Fallback for any file: check for an XML/ARXML encoding declaration
- *     (<?xml version="1.0" encoding="..."?>) in the first 1 KB of the file.
+ *     (<?xml version="1.0" encoding="..."?>) in the file header window.
  *
  * Returns a normalized VS Code encoding identifier, or null when no
- * intervention is needed (no config entry and no XML declaration found).
+ * intervention is needed (no config match and no XML declaration found).
  */
 export function resolveTargetEncoding(uri: vscode.Uri, buf: Buffer): string | null {
     const configured = getExpectedEncoding(uri);
@@ -53,7 +55,27 @@ export async function handleDocumentOpen(doc: vscode.TextDocument): Promise<void
 
     let buf: Buffer;
     try {
-        buf = fs.readFileSync(doc.uri.fsPath);
+        const fd = fs.openSync(doc.uri.fsPath, 'r');
+        try {
+            // 1) Cheap first pass: read a small prefix for most files.
+            const initial = Buffer.alloc(INITIAL_SCAN_BYTES);
+            const initialBytes = fs.readSync(fd, initial, 0, INITIAL_SCAN_BYTES, 0);
+            buf = initial.subarray(0, initialBytes);
+
+            // 2) If header looks XML-like but declaration was not fully captured,
+            //    widen to the full declaration scan window.
+            if (
+                initialBytes === INITIAL_SCAN_BYTES &&
+                detectXmlDeclaration(buf) === null &&
+                startsWithXmlPreamble(buf)
+            ) {
+                const widened = Buffer.alloc(XML_DECLARATION_SCAN_BYTES);
+                const widenedBytes = fs.readSync(fd, widened, 0, XML_DECLARATION_SCAN_BYTES, 0);
+                buf = widened.subarray(0, widenedBytes);
+            }
+        } finally {
+            fs.closeSync(fd);
+        }
     } catch (err) {
         console.error(`[Encoding Guard] could not read file: ${err}`);
         return;

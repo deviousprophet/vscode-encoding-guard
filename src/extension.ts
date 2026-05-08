@@ -72,17 +72,18 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             const cfg = vscode.workspace.getConfiguration('encoding-guard', targetUri);
-            const current = cfg.get<Record<string, string>>('extensionMap', {})[ext];
+            const patternMap = cfg.get<Record<string, string>>('patternMap', {});
+            const current = patternMap[ext];
             const chosen = await pickEncoding(current ? normalizeEncoding(current) : undefined);
             if (!chosen) { return; }
 
-            const map = { ...cfg.get<Record<string, string>>('extensionMap', {}), [ext]: chosen };
-            await cfg.update('extensionMap', map, vscode.ConfigurationTarget.Workspace);
+            const map = { ...patternMap, [ext]: chosen };
+            await cfg.update('patternMap', map, vscode.ConfigurationTarget.Workspace);
             vscode.window.showInformationMessage(`Encoding Guard: Set ${ext} → ${chosen}`);
         }),
     );
 
-    // encoding-guard.setFileEncoding — pick an encoding and store it in fileMap for this specific file.
+    // encoding-guard.setFileEncoding — pick an encoding and store it in patternMap for this specific file.
     context.subscriptions.push(
         vscode.commands.registerCommand('encoding-guard.setFileEncoding', async (uri?: vscode.Uri) => {
             const targetUri = uri ?? vscode.window.activeTextEditor?.document.uri;
@@ -96,12 +97,13 @@ export function activate(context: vscode.ExtensionContext) {
 
             const relPath = path.relative(workspaceFolder.uri.fsPath, targetUri.fsPath).replace(/\\/g, '/');
             const cfg = vscode.workspace.getConfiguration('encoding-guard', targetUri);
-            const current = cfg.get<Record<string, string>>('fileMap', {})[relPath];
+            const patternMap = cfg.get<Record<string, string>>('patternMap', {});
+            const current = patternMap[relPath];
             const chosen = await pickEncoding(current ? normalizeEncoding(current) : undefined);
             if (!chosen) { return; }
 
-            const map = { ...cfg.get<Record<string, string>>('fileMap', {}), [relPath]: chosen };
-            await cfg.update('fileMap', map, vscode.ConfigurationTarget.Workspace);
+            const map = { ...patternMap, [relPath]: chosen };
+            await cfg.update('patternMap', map, vscode.ConfigurationTarget.Workspace);
             vscode.window.showInformationMessage(`Encoding Guard: Set ${relPath} → ${chosen}`);
         }),
     );

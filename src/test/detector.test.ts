@@ -1,7 +1,13 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
-import { detectBom, detectEncoding, detectXmlDeclaration } from '../detector';
+import {
+    detectBom,
+    detectEncoding,
+    detectXmlDeclaration,
+    startsWithXmlPreamble,
+    XML_DECLARATION_SCAN_BYTES,
+} from '../detector';
 
 // Sample directory is at <workspace-root>/sample/
 // tsconfig rootDir=src, outDir=out  →  __dirname = <root>/out/test
@@ -30,6 +36,31 @@ suite('detectBom', () => {
 
     test('returns null for empty buffer', () => {
         assert.strictEqual(detectBom(Buffer.alloc(0)), null);
+    });
+});
+
+suite('startsWithXmlPreamble', () => {
+    test('returns true for plain xml preamble', () => {
+        const buf = Buffer.from('<?xml version="1.0" encoding="UTF-8"?>', 'utf8');
+        assert.strictEqual(startsWithXmlPreamble(buf), true);
+    });
+
+    test('returns true for xml preamble after UTF-8 BOM and whitespace', () => {
+        const buf = Buffer.concat([
+            Buffer.from([0xEF, 0xBB, 0xBF]),
+            Buffer.from('  \r\n\t<?xml version="1.0"?>', 'utf8'),
+        ]);
+        assert.strictEqual(startsWithXmlPreamble(buf), true);
+    });
+
+    test('returns true for UTF-16 BOM prefix (defer to full parser)', () => {
+        const buf = Buffer.from([0xFF, 0xFE, 0x3C, 0x00, 0x3F, 0x00]);
+        assert.strictEqual(startsWithXmlPreamble(buf), true);
+    });
+
+    test('returns false when prefix is not xml', () => {
+        const buf = Buffer.from('not xml at all', 'utf8');
+        assert.strictEqual(startsWithXmlPreamble(buf), false);
     });
 });
 
@@ -104,9 +135,9 @@ suite('detectXmlDeclaration', () => {
         assert.strictEqual(detectXmlDeclaration(buf), null);
     });
 
-    test('declaration placed beyond 1 KB is not detected (returns null)', () => {
-        // Pad 1025 bytes of whitespace before the declaration so it falls outside the window
-        const padding = Buffer.alloc(1025, 0x20); // spaces
+    test('declaration placed beyond scan window is not detected (returns null)', () => {
+        // Pad beyond the scan window so the declaration falls outside
+        const padding = Buffer.alloc(XML_DECLARATION_SCAN_BYTES + 1, 0x20); // spaces
         const decl = Buffer.from('<?xml version="1.0" encoding="UTF-8"?>', 'utf8');
         const buf = Buffer.concat([padding, decl]);
         assert.strictEqual(detectXmlDeclaration(buf), null);
