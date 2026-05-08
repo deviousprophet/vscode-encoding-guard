@@ -1,5 +1,53 @@
 import { normalizeEncoding } from './normalizer';
 
+export const XML_DECLARATION_SCAN_BYTES = 64 * 1024;
+
+/**
+ * Fast byte-level check for an XML preamble near the start of a file.
+ *
+ * Skips BOM and leading ASCII whitespace, then checks for "<?xml".
+ * This allows callers to decide whether a larger header read is worthwhile
+ * without relying on file extension or VS Code language classification.
+ */
+export function startsWithXmlPreamble(buf: Buffer): boolean {
+    if (buf.length === 0) { return false; }
+
+    let i = 0;
+
+    // Skip BOM when present.
+    if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
+        i = 3;
+    } else if (buf.length >= 2 && (
+        (buf[0] === 0xFF && buf[1] === 0xFE) ||
+        (buf[0] === 0xFE && buf[1] === 0xFF)
+    )) {
+        // UTF-16 BOM exists. We do not attempt a UTF-16 token scan here;
+        // return true so callers can perform a larger read + full parse.
+        return true;
+    }
+
+    // Skip ASCII whitespace: space, tab, CR, LF.
+    while (i < buf.length) {
+        const b = buf[i];
+        if (b === 0x20 || b === 0x09 || b === 0x0D || b === 0x0A) {
+            i += 1;
+            continue;
+        }
+        break;
+    }
+
+    if (i + 5 > buf.length) { return false; }
+
+    // "<?xml" (case-insensitive for safety).
+    return (
+        buf[i] === 0x3C &&
+        buf[i + 1] === 0x3F &&
+        (buf[i + 2] | 0x20) === 0x78 &&
+        (buf[i + 3] | 0x20) === 0x6D &&
+        (buf[i + 4] | 0x20) === 0x6C
+    );
+}
+
 /**
  * Returns the encoding derived from the BOM at the start of `buf`,
  * or null if no BOM is present.
@@ -21,7 +69,7 @@ export function detectBom(buf: Buffer): string | null {
  * Attempts to extract the encoding declared inside an XML/ARXML processing
  * instruction, e.g. <?xml version="1.0" encoding="ISO-8859-1"?>.
  *
- * Reads only the first 1 KB of `buf` for performance.
+ * Reads only the first `XML_DECLARATION_SCAN_BYTES` bytes of `buf` for performance.
  * Returns a normalized VS Code encoding identifier, or null if not found.
  */
 export function detectXmlDeclaration(buf: Buffer): string | null {
@@ -34,11 +82,11 @@ export function detectXmlDeclaration(buf: Buffer): string | null {
 
     if (bom === 'utf16le') {
         // Skip the 2-byte BOM, then decode as UTF-16 LE.
-        const slice = buf.subarray(2, Math.min(buf.length, 1024));
+        const slice = buf.subarray(2, Math.min(buf.length, XML_DECLARATION_SCAN_BYTES));
         header = slice.toString('utf16le');
     } else if (bom === 'utf16be') {
         // Skip the 2-byte BOM, swap byte pairs, then decode as UTF-16 LE.
-        const slice = buf.subarray(2, Math.min(buf.length, 1024));
+        const slice = buf.subarray(2, Math.min(buf.length, XML_DECLARATION_SCAN_BYTES));
         const swapped = Buffer.alloc(slice.length & ~1); // round down to even
         for (let i = 0; i + 1 < slice.length; i += 2) {
             swapped[i]     = slice[i + 1];
@@ -48,7 +96,7 @@ export function detectXmlDeclaration(buf: Buffer): string | null {
     } else {
         // ASCII / UTF-8 / single-byte — the declaration is always in the ASCII
         // range so latin1 decoding is safe and avoids losing bytes.
-        header = buf.subarray(0, Math.min(buf.length, 1024)).toString('latin1');
+        header = buf.subarray(0, Math.min(buf.length, XML_DECLARATION_SCAN_BYTES)).toString('latin1');
     }
 
     // Match:  <?xml  ...  encoding="UTF-8"  ?>  (single or double quotes)

@@ -49,16 +49,16 @@ suite('resolveTargetEncoding', () => {
         assert.strictEqual(resolveTargetEncoding(vscode.Uri.file(file), buf), null);
     });
 
-    test('extensionMap config wins over XML declaration', async () => {
+    test('patternMap config wins over XML declaration', async () => {
         const cfg = vscode.workspace.getConfiguration('encoding-guard');
-        await cfg.update('extensionMap', { '.txt': 'utf8' }, vscode.ConfigurationTarget.Global);
+        await cfg.update('patternMap', { '.txt': 'utf8' }, vscode.ConfigurationTarget.Global);
         try {
             const file = path.join(SAMPLE, 'xml-decl.txt');
             const buf = fs.readFileSync(file);
             assert.strictEqual(resolveTargetEncoding(vscode.Uri.file(file), buf), 'utf8',
                 'Config entry must take precedence over XML declaration');
         } finally {
-            await cfg.update('extensionMap', undefined, vscode.ConfigurationTarget.Global);
+            await cfg.update('patternMap', undefined, vscode.ConfigurationTarget.Global);
         }
     });
 });
