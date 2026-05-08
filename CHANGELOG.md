@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.1.0] — 2026-05-08
+
+### Changed
+
+- **Unified configuration mapping** — replaced separate `extensionMap` and `fileMap`
+  behavior with a single `encoding-guard.patternMap` setting.
+- **Pattern priority model** — pattern resolution now applies specificity ordering:
+  exact path matches first, then more specific glob patterns, then extension
+  shorthand (for example `.csv`) as the default fallback.
+- **Context menu mapping commands** — *Set Extension Encoding...* and
+  *Set File Encoding...* now both write to `patternMap`.
+
+### Improved
+
+- **Large-file XML declaration handling** — XML declaration detection now uses a
+  larger header scan window and a progressive content-based probe so large files
+  with XML preambles are handled more reliably without relying on fixed extension
+  allowlists.
+- **XML preamble probing** — added byte-level preamble detection to decide when to
+  widen scanning for declaration parsing while keeping the common path lightweight.
+
 ## [1.0.1] — 2026-05-07
 
 ### Fixed
