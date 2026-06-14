@@ -1,6 +1,13 @@
-name: Fallow analysis
+name: Fallow
+
 on:
-  workflow_call:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   Analyze:
