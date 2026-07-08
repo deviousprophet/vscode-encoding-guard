@@ -2,6 +2,44 @@ import { normalizeEncoding } from './normalizer';
 
 export const XML_DECLARATION_SCAN_BYTES = 64 * 1024;
 
+const ASCII_XML_PREAMBLE = [0x3C, 0x3F, 0x78, 0x6D, 0x6C];
+
+function hasUtf8Bom(buf: Buffer): boolean {
+    return buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF;
+}
+
+function hasUtf16LeBom(buf: Buffer): boolean {
+    return buf.length >= 2 && buf[0] === 0xFF && buf[1] === 0xFE;
+}
+
+function hasUtf16BeBom(buf: Buffer): boolean {
+    return buf.length >= 2 && buf[0] === 0xFE && buf[1] === 0xFF;
+}
+
+function isAsciiWhitespace(byte: number): boolean {
+    return byte === 0x20 || byte === 0x09 || byte === 0x0D || byte === 0x0A;
+}
+
+function firstNonWhitespaceOffset(buf: Buffer, start: number): number {
+    let offset = start;
+    while (offset < buf.length && isAsciiWhitespace(buf[offset])) {
+        offset += 1;
+    }
+    return offset;
+}
+
+function startsWithAsciiXml(buf: Buffer, offset: number): boolean {
+    return ASCII_XML_PREAMBLE.every((byte, index) => (buf[offset + index] | 0x20) === byte);
+}
+
+function isUtf16BomEncoding(encoding: string | null): boolean {
+    return encoding === 'utf16le' || encoding === 'utf16be';
+}
+
+function hasCompleteXmlPreamble(buf: Buffer, offset: number): boolean {
+    return offset + ASCII_XML_PREAMBLE.length <= buf.length && startsWithAsciiXml(buf, offset);
+}
+
 /**
  * Fast byte-level check for an XML preamble near the start of a file.
  *
@@ -10,42 +48,15 @@ export const XML_DECLARATION_SCAN_BYTES = 64 * 1024;
  * without relying on file extension or VS Code language classification.
  */
 export function startsWithXmlPreamble(buf: Buffer): boolean {
-    if (buf.length === 0) { return false; }
-
-    let i = 0;
-
-    // Skip BOM when present.
-    if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
-        i = 3;
-    } else if (buf.length >= 2 && (
-        (buf[0] === 0xFF && buf[1] === 0xFE) ||
-        (buf[0] === 0xFE && buf[1] === 0xFF)
-    )) {
+    const bom = detectBom(buf);
+    if (isUtf16BomEncoding(bom)) {
         // UTF-16 BOM exists. We do not attempt a UTF-16 token scan here;
         // return true so callers can perform a larger read + full parse.
         return true;
     }
 
-    // Skip ASCII whitespace: space, tab, CR, LF.
-    while (i < buf.length) {
-        const b = buf[i];
-        if (b === 0x20 || b === 0x09 || b === 0x0D || b === 0x0A) {
-            i += 1;
-            continue;
-        }
-        break;
-    }
-
-    if (i + 5 > buf.length) { return false; }
-
-    // "<?xml" (case-insensitive for safety).
-    return (
-        buf[i] === 0x3C &&
-        buf[i + 1] === 0x3F &&
-        (buf[i + 2] | 0x20) === 0x78 &&
-        (buf[i + 3] | 0x20) === 0x6D &&
-        (buf[i + 4] | 0x20) === 0x6C
-    );
+    const offset = firstNonWhitespaceOffset(buf, bom === 'utf8bom' ? 3 : 0);
+    return hasCompleteXmlPreamble(buf, offset);
 }
 
 /**
@@ -53,15 +64,9 @@ export function startsWithXmlPreamble(buf: Buffer): boolean {
  * or null if no BOM is present.
  */
 export function detectBom(buf: Buffer): string | null {
-    if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
-        return 'utf8bom';
-    }
-    if (buf.length >= 2 && buf[0] === 0xFF && buf[1] === 0xFE) {
-        return 'utf16le';
-    }
-    if (buf.length >= 2 && buf[0] === 0xFE && buf[1] === 0xFF) {
-        return 'utf16be';
-    }
+    if (hasUtf8Bom(buf)) { return 'utf8bom'; }
+    if (hasUtf16LeBom(buf)) { return 'utf16le'; }
+    if (hasUtf16BeBom(buf)) { return 'utf16be'; }
     return null;
 }
 
@@ -75,36 +80,73 @@ export function detectBom(buf: Buffer): string | null {
 export function detectXmlDeclaration(buf: Buffer): string | null {
     if (buf.length === 0) { return null; }
 
-    // Decode the header into a string we can regex against.
-    // For UTF-16 files we must handle the byte order before decoding.
-    let header: string;
-    const bom = detectBom(buf);
-
-    if (bom === 'utf16le') {
-        // Skip the 2-byte BOM, then decode as UTF-16 LE.
-        const slice = buf.subarray(2, Math.min(buf.length, XML_DECLARATION_SCAN_BYTES));
-        header = slice.toString('utf16le');
-    } else if (bom === 'utf16be') {
-        // Skip the 2-byte BOM, swap byte pairs, then decode as UTF-16 LE.
-        const slice = buf.subarray(2, Math.min(buf.length, XML_DECLARATION_SCAN_BYTES));
-        const swapped = Buffer.alloc(slice.length & ~1); // round down to even
-        for (let i = 0; i + 1 < slice.length; i += 2) {
-            swapped[i]     = slice[i + 1];
-            swapped[i + 1] = slice[i];
-        }
-        header = swapped.toString('utf16le');
-    } else {
-        // ASCII / UTF-8 / single-byte — the declaration is always in the ASCII
-        // range so latin1 decoding is safe and avoids losing bytes.
-        header = buf.subarray(0, Math.min(buf.length, XML_DECLARATION_SCAN_BYTES)).toString('latin1');
-    }
-
-    // Match:  <?xml  ...  encoding="UTF-8"  ?>  (single or double quotes)
+    const header = decodeXmlHeader(buf);
     const match = header.match(/<\?xml[^?]*encoding\s*=\s*["']([^"']+)["']/i);
     if (!match) { return null; }
 
     return normalizeEncoding(match[1]);
 }
+
+function decodeXmlHeader(buf: Buffer): string {
+    const bom = detectBom(buf);
+    const end = Math.min(buf.length, XML_DECLARATION_SCAN_BYTES);
+
+    if (bom === 'utf16le') {
+        return buf.subarray(2, end).toString('utf16le');
+    }
+
+    if (bom === 'utf16be') {
+        return decodeUtf16Be(buf.subarray(2, end));
+    }
+
+    return buf.subarray(0, end).toString('latin1');
+}
+
+function decodeUtf16Be(buf: Buffer): string {
+    const swapped = Buffer.alloc(buf.length & ~1);
+    for (let i = 0; i + 1 < buf.length; i += 2) {
+        swapped[i] = buf[i + 1];
+        swapped[i + 1] = buf[i];
+    }
+    return swapped.toString('utf16le');
+}
+
+function countBytes(buf: Buffer, value: number): number {
+    let count = 0;
+    for (const byte of buf) {
+        if (byte === value) {
+            count += 1;
+        }
+    }
+    return count;
+}
+
+function isBinary(buf: Buffer): boolean {
+    return countBytes(buf, 0) / buf.length > 0.3;
+}
+
+function isUtf8RoundTrip(buf: Buffer): boolean {
+    const text = buf.toString('utf8');
+    return !text.includes('\uFFFD') && Buffer.from(text, 'utf8').equals(buf);
+}
+
+function detectEmpty(buf: Buffer): string | null {
+    return buf.length === 0 ? 'utf8' : null;
+}
+
+function detectBinary(buf: Buffer): string | null {
+    return isBinary(buf) ? 'binary' : null;
+}
+
+function detectUtf8(buf: Buffer): string | null {
+    try {
+        return isUtf8RoundTrip(buf) ? 'utf8' : null;
+    } catch {
+        return null;
+    }
+}
+
+const ENCODING_DETECTORS = [detectBom, detectEmpty, detectBinary, detectUtf8];
 
 /**
  * Heuristic encoding detection from raw bytes.
@@ -117,28 +159,7 @@ export function detectXmlDeclaration(buf: Buffer): string | null {
  * Returns a VS Code encoding identifier.
  */
 export function detectEncoding(buf: Buffer): string {
-    const bom = detectBom(buf);
-    if (bom) { return bom; }
-
-    if (buf.length === 0) { return 'utf8'; }
-
-    // Binary detection: more than 30 % NUL bytes.
-    let nulCount = 0;
-    for (let i = 0; i < buf.length; i++) {
-        if (buf[i] === 0) { nulCount++; }
-    }
-    if (nulCount / buf.length > 0.3) { return 'binary'; }
-
-    // UTF-8 round-trip: decode as UTF-8, re-encode, compare raw bytes.
-    try {
-        const text = buf.toString('utf8');
-        if (!text.includes('\uFFFD')) {
-            const reencoded = Buffer.from(text, 'utf8');
-            if (reencoded.equals(buf)) { return 'utf8'; }
-        }
-    } catch {
-        // fall through
-    }
-
-    return 'latin1';
+    return ENCODING_DETECTORS
+        .map(detector => detector(buf))
+        .find((encoding): encoding is string => encoding !== null) ?? 'latin1';
 }
