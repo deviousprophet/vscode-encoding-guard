@@ -1,5 +1,10 @@
 # Encoding Guard
 
+[![Visual Studio Marketplace](https://img.shields.io/badge/Visual_Studio_Marketplace-blue)](https://marketplace.visualstudio.com/items?itemName=deviousprophet.vscode-encoding-guard)
+[![Open VSX Registry](https://img.shields.io/badge/Open_VSX_Registry-c160ef)](https://open-vsx.org/extension/deviousprophet/vscode-encoding-guard)
+[![GitHub Release](https://img.shields.io/github/v/release/deviousprophet/vscode-encoding-guard?label=Latest%20Release&color=brightgreen&logo=github)](https://github.com/deviousprophet/vscode-encoding-guard/releases)
+[![License](https://img.shields.io/github/license/deviousprophet/vscode-encoding-guard?color=yellow)](https://github.com/deviousprophet/vscode-encoding-guard/blob/master/LICENSE)
+
 Encoding Guard is a VS Code extension that automatically detects and applies the correct file encoding when you open files, so text is never garbled in mixed-encoding projects.
 
 ## How it works
