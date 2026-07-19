@@ -10,12 +10,8 @@ const CHARSET_TO_VSCODE: Record<string, string> = {
 };
 
 export function getEditorConfigCharset(filePath: string): string | null {
-    try {
-        const config = editorconfig.parseSync(filePath);
-        const raw = config.charset;
-        if (typeof raw !== 'string' || raw === 'unset') { return null; }
-        return CHARSET_TO_VSCODE[raw] ?? null;
-    } catch {
-        return null;
-    }
+    const config = editorconfig.parseSync(filePath);
+    const raw = config.charset;
+    if (typeof raw !== 'string' || raw === 'unset') { return null; }
+    return CHARSET_TO_VSCODE[raw] ?? null;
 }
