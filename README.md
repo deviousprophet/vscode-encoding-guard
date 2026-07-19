@@ -15,9 +15,21 @@ Encoding Guard is a VS Code extension that automatically detects and applies the
    - **Extension shorthand** (e.g. `.csv`) — lowest priority, acts as default for all matching extensions
 2. **XML declaration** — For any file that starts with `<?xml ... encoding="..."?>`, Encoding Guard reads the declared encoding and silently reopens the file with the correct encoding if VS Code opened it with a different one. BOM-prefixed XML files (UTF-8 BOM, UTF-16 LE/BE) are handled transparently — the BOM is detected internally and skipped when parsing the declaration.
 
-Priority order: `patternMap` (by specificity) → XML declaration → no action.
+Priority order: `patternMap` (by specificity) → XML declaration → `enableHeuristicFallback` (opt-in) → `.editorconfig charset` → no action.
 
 > **Note:** UTF-8 BOM, UTF-16 LE, and UTF-16 BE files are also detected and reopened with the correct encoding. VS Code handles BOM natively for non-XML files; Encoding Guard's BOM detection additionally powers XML declaration parsing for BOM-prefixed XML files.
+
+### Implicit encoding sources
+
+In addition to explicit `patternMap` config, Encoding Guard reads from these sources automatically (lower priority than `patternMap`):
+
+- **XML declarations** — files with `<?xml encoding="..."?>` are decoded using the declared encoding
+- **`.editorconfig`** — if your project has an `.editorconfig` with a `charset` rule matching the file, it is used as an implicit encoding source (mapped values: `utf-8`, `utf-8-bom`, `utf-16le`, `utf-16be`, `latin1`)
+- **Heuristic fallback** — when `encoding-guard.enableHeuristicFallback` is enabled, `jschardet` guesses the encoding as a last resort before `.editorconfig`
+
+### Transcoding files
+
+Use **Encoding Guard: Convert File to Encoding...** (available in the right-click context menu or Command Palette) to transcode a file's bytes to a different encoding and save to disk. This is distinct from setting encoding metadata — it actually rewrites the file on disk.
 
 ## Configuration
 
@@ -48,9 +60,10 @@ Or edit settings manually:
 Right-click any file in the Explorer or editor to access the **Encoding Guard** submenu:
 
 | Item | Action |
-|---|---|
+|---|---|---|
 | **Set Extension Encoding...** | Pick an encoding and apply it to all files with this extension (adds `.ext` to `patternMap`) |
 | **Set File Encoding...** | Pick an encoding and pin it to this specific file (adds exact path to `patternMap`) |
+| **Convert File to Encoding...** | Read file from disk, transcode bytes to a chosen encoding, and save |
 | **Open Encoding Guard Settings** | Open VS Code Settings filtered to Encoding Guard |
 
 ## Issues
