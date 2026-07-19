@@ -5,5 +5,9 @@
     "src/test/**/*.test.ts",
     ".vscode-test.mjs",
     "esbuild.js"
+  ],
+  "ignorePatterns": [
+    "out/**",
+    ".opencode/**"
   ]
 }

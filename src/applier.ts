@@ -91,26 +91,11 @@ function getCurrentEncoding(doc: vscode.TextDocument): string | null {
     return current;
 }
 
-function getCurrentEncodingForTarget(doc: vscode.TextDocument, target: string | null): string | null {
-    return target === null ? null : getCurrentEncoding(doc);
-}
-
-function isAlreadyCorrect(target: string | null, current: string | null): boolean {
-    return target !== null && current === target;
-}
-
-function pickReopenTarget(target: string | null, current: string | null): string | null {
-    if (isAlreadyCorrect(target, current)) {
-        console.log('[Encoding Guard] ✓ already correct, no action needed');
-    }
-
-    return target !== null && current !== null && current !== target ? target : null;
-}
-
 function getReopenTarget(doc: vscode.TextDocument, buf: Buffer): string | null {
     const target = getResolvedTarget(doc, buf);
-    const current = getCurrentEncodingForTarget(doc, target);
-    return pickReopenTarget(target, current);
+    if (target === null) { return null; }
+    const current = getCurrentEncoding(doc);
+    return current !== null && current !== target ? target : null;
 }
 
 async function applyResolvedEncoding(doc: vscode.TextDocument, buf: Buffer): Promise<void> {
