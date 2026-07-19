@@ -16,7 +16,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": ["onStartupFinished"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -88,6 +90,12 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "encoding-guard.enableHeuristicFallback": {
+          "type": "boolean",
+          "scope": "resource",
+          "description": "When enabled, uses jschardet to guess encoding for files that have no patternMap entry and no XML declaration. Disabled by default because heuristic detection can misfire on short or binary-adjacent files.",
+          "default": false
         }
       }
     }
@@ -107,15 +115,18 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.120.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.56.1",
-    "eslint": "^9.39.3",
+    "@types/vscode": "^1.120.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
     "esbuild": "^0.28.1",
+    "eslint": "^9.39.3",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "typescript-eslint": "^8.56.1"
+  },
+  "dependencies": {
+    "jschardet": "^3.1.4"
   }
 }

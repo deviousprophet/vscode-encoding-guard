@@ -34,6 +34,9 @@ Or edit settings manually:
     "data/legacy/**/*.txt":    "iso88591",        // Specific subdirectory
     "config/old-report.csv":   "cp1252"           // Override: this specific file
 }
+
+// Opt-in: guess encoding for unmapped files without XML declarations
+"encoding-guard.enableHeuristicFallback": true   // default: false
 ```
 
 - Settings are **resource-scoped**: you can set different values per workspace folder.
