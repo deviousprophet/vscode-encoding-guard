@@ -4,7 +4,7 @@ import * as path from 'path';
 import { detectEncoding, detectXmlDeclaration, detectBom } from './detector';
 import { getExpectedEncoding } from './configManager';
 import { normalizeEncoding } from './normalizer';
-import { handleDocumentOpen, reopenWithEncoding, getEncodingSource, resolveTargetEncoding } from './applier';
+import { handleDocumentOpen, reopenWithEncoding, resolveTargetEncoding } from './applier';
 import { pickEncoding } from './encodingList';
 import { convertBuffer } from './converter';
 
@@ -20,7 +20,7 @@ function detectFileEncoding(uri: vscode.Uri): EncodingDetection {
         return {
             detected: detectEncoding(buf),
             xmlDecl: detectXmlDeclaration(buf),
-            source: getEncodingSource(uri, buf) ?? resolveTargetEncoding(uri, buf) ?? 'UTF-8 default',
+            source: resolveTargetEncoding(uri, buf) ?? 'UTF-8 default',
         };
     } catch {
         return { detected: 'unknown', xmlDecl: null, source: null };
@@ -43,7 +43,7 @@ function buildEncodingMessage(doc: vscode.TextDocument, result: EncodingDetectio
         lines.push(`Config expects:   ${configured}`);
     }
     if (result.source) {
-        lines.push(`Encoding source:  ${result.source}`);
+        lines.push(`Resolved encoding:  ${result.source}`);
     }
 
     return lines.join('\n');
