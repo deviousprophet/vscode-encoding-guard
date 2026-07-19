@@ -28,8 +28,8 @@
 - Added XML declaration auto-detection: any file whose first 1 KB contains an `<?xml ... encoding="..."?>` declaration is reopened with the declared encoding automatically (no configuration required)
 - Added BOM detection for UTF-8 BOM, UTF-16 LE, and UTF-16 BE
 - Added context-menu commands for Explorer & Editor:
-  - *Detect File Encoding* — shows the resolved encoding for the focused file
   - *Set Encoding for Extension* — maps the file's extension to any encoding via a searchable QuickPick (all VS Code–supported encodings listed)
   - *Set Encoding for This File* — pins the exact file path to a chosen encoding
   - *Open Encoding Guard Settings* — navigates directly to the extension settings
+- Added *Detect File Encoding* Command Palette command — shows the resolved encoding for the active file
 - Added an encoding normalizer that accepts common encoding name variants (`UTF-8`, `ISO-8859-1`, `windows-1252`, `cp1252`, `latin-1`, …) and maps them to canonical VS Code encoding identifiers
