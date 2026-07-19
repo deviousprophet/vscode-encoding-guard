@@ -4,24 +4,26 @@ import * as path from 'path';
 import { detectEncoding, detectXmlDeclaration, detectBom } from './detector';
 import { getExpectedEncoding } from './configManager';
 import { normalizeEncoding } from './normalizer';
-import { handleDocumentOpen, reopenWithEncoding } from './applier';
+import { handleDocumentOpen, reopenWithEncoding, resolveTargetEncoding } from './applier';
 import { pickEncoding } from './encodingList';
 import { convertBuffer } from './converter';
 
 type EncodingDetection = {
     detected: string;
     xmlDecl: string | null;
+    source: string | null;
 };
 
-function detectFileEncoding(filePath: string): EncodingDetection {
+function detectFileEncoding(uri: vscode.Uri): EncodingDetection {
     try {
-        const buf = fs.readFileSync(filePath);
+        const buf = fs.readFileSync(uri.fsPath);
         return {
             detected: detectEncoding(buf),
             xmlDecl: detectXmlDeclaration(buf),
+            source: resolveTargetEncoding(uri, buf) ?? 'UTF-8 default',
         };
     } catch {
-        return { detected: 'unknown', xmlDecl: null };
+        return { detected: 'unknown', xmlDecl: null, source: null };
     }
 }
 
@@ -40,6 +42,9 @@ function buildEncodingMessage(doc: vscode.TextDocument, result: EncodingDetectio
     if (configured) {
         lines.push(`Config expects:   ${configured}`);
     }
+    if (result.source) {
+        lines.push(`Resolved encoding:  ${result.source}`);
+    }
 
     return lines.join('\n');
 }
@@ -57,7 +62,7 @@ async function showDetectedEncoding(): Promise<void> {
         return;
     }
 
-    const message = buildEncodingMessage(doc, detectFileEncoding(doc.uri.fsPath));
+    const message = buildEncodingMessage(doc, detectFileEncoding(doc.uri));
     vscode.window.showInformationMessage(message, { modal: true });
 }
 

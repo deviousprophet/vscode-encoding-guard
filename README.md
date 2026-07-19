@@ -57,6 +57,8 @@ Or edit settings manually:
 
 ## Context menu
 
+Use **Encoding Guard: Detect Encoding** (Command Palette or right-click) to see which encoding source resolved the current file.
+
 Right-click any file in the Explorer or editor to access the **Encoding Guard** submenu:
 
 | Item | Action |
