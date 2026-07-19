@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<AUTOSAR xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="AUTOSAR_4-3-0.xsd">
-  <AR-PACKAGES>
-    <AR-PACKAGE>
-      <SHORT-NAME>MyPackage</SHORT-NAME>
-    </AR-PACKAGE>
-  </AR-PACKAGES>
-</AUTOSAR>

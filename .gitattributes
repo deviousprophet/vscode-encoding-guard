@@ -1,4 +1,0 @@
-# Treat all sample files as binary so Git never converts line endings.
-# These files contain carefully crafted encoded bytes (Latin-1, Windows-1252, etc.)
-# that would be corrupted by CRLF conversion.
-sample/* binary

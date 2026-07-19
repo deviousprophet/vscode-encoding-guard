@@ -1,6 +1,4 @@
 import * as assert from 'assert';
-import * as path from 'path';
-import * as fs from 'fs';
 import {
     detectBom,
     detectEncoding,
@@ -8,10 +6,6 @@ import {
     startsWithXmlPreamble,
     XML_DECLARATION_SCAN_BYTES,
 } from '../detector';
-
-// Sample directory is at <workspace-root>/sample/
-// tsconfig rootDir=src, outDir=out  →  __dirname = <root>/out/test
-const SAMPLE = path.resolve(__dirname, '..', '..', 'sample');
 
 suite('detectBom', () => {
     test('returns utf8bom for UTF-8 BOM bytes', () => {
@@ -65,18 +59,18 @@ suite('startsWithXmlPreamble', () => {
 });
 
 suite('detectXmlDeclaration', () => {
-    test('parses UTF-8 declaration from sample file', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'utf8-decl.xml'));
+    test('parses UTF-8 declaration', () => {
+        const buf = Buffer.from('<?xml version="1.0" encoding="UTF-8"?>\n<root/>', 'utf8');
         assert.strictEqual(detectXmlDeclaration(buf), 'utf8');
     });
 
-    test('parses ISO-8859-1 declaration from sample file', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'iso88591-decl.xml'));
+    test('parses ISO-8859-1 declaration', () => {
+        const buf = Buffer.from('<?xml version="1.0" encoding="ISO-8859-1"?>\n<root/>', 'utf8');
         assert.strictEqual(detectXmlDeclaration(buf), 'iso88591');
     });
 
-    test('parses UTF-8 declaration from ARXML sample', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'utf8.arxml'));
+    test('parses UTF-8 declaration from ARXML-style content', () => {
+        const buf = Buffer.from('<?xml version="1.0" encoding="UTF-8"?>\n<arxml><element/></arxml>', 'utf8');
         assert.strictEqual(detectXmlDeclaration(buf), 'utf8');
     });
 
@@ -102,49 +96,41 @@ suite('detectXmlDeclaration', () => {
     });
 
     test('parses UTF-16 LE file (BOM + declaration)', () => {
-        // Build a UTF-16 LE buffer: BOM + declaration in UTF-16 LE
         const decl = '<?xml version="1.0" encoding="UTF-16"?><r/>';
         const textBuf = Buffer.from(decl, 'utf16le');
         const bom = Buffer.from([0xFF, 0xFE]);
         const buf = Buffer.concat([bom, textBuf]);
-        // "utf-16" normalizes to 'utf16le'
         assert.strictEqual(detectXmlDeclaration(buf), 'utf16le');
     });
 
-    // --- edge cases ---
-
-    test('non-.xml file (.txt) with ISO-8859-1 declaration returns iso88591', () => {
-        // xml-decl.txt is a .txt file that starts with <?xml encoding="ISO-8859-1"?>
-        const buf = fs.readFileSync(path.join(SAMPLE, 'xml-decl.txt'));
+    test('non-.xml content (.txt) with ISO-8859-1 declaration returns iso88591', () => {
+        const buf = Buffer.from('<?xml encoding="ISO-8859-1"?>\nCaf\u00E9 R\u00E9sum\u00E9', 'utf8');
         assert.strictEqual(detectXmlDeclaration(buf), 'iso88591');
     });
 
-    test('non-.xml file (.csv) with windows-1252 declaration returns windows1252', () => {
-        // xml-decl.csv is a .csv file that starts with <?xml encoding="windows-1252"?>
-        const buf = fs.readFileSync(path.join(SAMPLE, 'xml-decl.csv'));
+    test('non-.xml content (.csv) with windows-1252 declaration returns windows1252', () => {
+        const buf = Buffer.from('<?xml encoding="windows-1252"?>\nPrice,?100', 'utf8');
         assert.strictEqual(detectXmlDeclaration(buf), 'windows1252');
     });
 
-    test('windows1252-decl.xml returns windows1252', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'windows1252-decl.xml'));
+    test('windows1252 declaration returns windows1252', () => {
+        const buf = Buffer.from('<?xml version="1.0" encoding="windows-1252"?>\n<root/>', 'utf8');
         assert.strictEqual(detectXmlDeclaration(buf), 'windows1252');
     });
 
     test('XML with <?xml version="1.0"?> but no encoding attribute returns null', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'xml-decl-no-enc.xml'));
+        const buf = Buffer.from('<?xml version="1.0"?>\n<root><element/></root>', 'utf8');
         assert.strictEqual(detectXmlDeclaration(buf), null);
     });
 
     test('declaration placed beyond scan window is not detected (returns null)', () => {
-        // Pad beyond the scan window so the declaration falls outside
-        const padding = Buffer.alloc(XML_DECLARATION_SCAN_BYTES + 1, 0x20); // spaces
+        const padding = Buffer.alloc(XML_DECLARATION_SCAN_BYTES + 1, 0x20);
         const decl = Buffer.from('<?xml version="1.0" encoding="UTF-8"?>', 'utf8');
         const buf = Buffer.concat([padding, decl]);
         assert.strictEqual(detectXmlDeclaration(buf), null);
     });
 
     test('truncated buffer (cuts off inside encoding attribute) does not throw', () => {
-        // Simulate a partial read that ends mid-declaration
         const partial = Buffer.from('<?xml version="1.0" encoding="ISO', 'utf8');
         assert.doesNotThrow(() => detectXmlDeclaration(partial));
         assert.strictEqual(detectXmlDeclaration(partial), null);
@@ -152,33 +138,43 @@ suite('detectXmlDeclaration', () => {
 });
 
 suite('detectEncoding (heuristic)', () => {
-    test('ascii.txt detected as utf8', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'ascii.txt'));
+    test('ascii detected as utf8', () => {
+        const buf = Buffer.from('Hello world\n', 'utf8');
         assert.strictEqual(detectEncoding(buf), 'utf8');
     });
 
-    test('utf8-emoji.txt detected as utf8', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'utf8-emoji.txt'));
+    test('utf8 emoji detected as utf8', () => {
+        const buf = Buffer.from('\u{1F600}\n', 'utf8');
         assert.strictEqual(detectEncoding(buf), 'utf8');
     });
 
-    test('long-utf8.txt detected as utf8', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'long-utf8.txt'));
+    test('long utf8 detected as utf8', () => {
+        const buf = Buffer.from('\u00E9\u00E8\u00EA\u00EB\u00EF\u00EE\u00EC\u00ED'.repeat(200), 'utf8');
         assert.strictEqual(detectEncoding(buf), 'utf8');
     });
 
-    test('utf16le.txt detected as utf16le (BOM)', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'utf16le.txt'));
+    test('utf16le BOM detected as utf16le', () => {
+        const buf = Buffer.concat([
+            Buffer.from([0xFF, 0xFE]),
+            Buffer.from('Hello', 'utf16le'),
+        ]);
         assert.strictEqual(detectEncoding(buf), 'utf16le');
     });
 
-    test('utf16be.txt detected as utf16be (BOM)', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'utf16be.txt'));
+    test('utf16be BOM detected as utf16be', () => {
+        // Node has no utf16be encoding; swap bytes manually from utf16le.
+        const le = Buffer.from('Hello', 'utf16le');
+        const be = Buffer.alloc(le.length);
+        for (let i = 0; i + 1 < le.length; i += 2) {
+            be[i] = le[i + 1];
+            be[i + 1] = le[i];
+        }
+        const buf = Buffer.concat([Buffer.from([0xFE, 0xFF]), be]);
         assert.strictEqual(detectEncoding(buf), 'utf16be');
     });
 
-    test('csv-latin1.csv detected as latin1', () => {
-        const buf = fs.readFileSync(path.join(SAMPLE, 'csv-latin1.csv'));
+    test('latin1 content detected as latin1', () => {
+        const buf = Buffer.from([0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0xA3, 0x31, 0x30, 0x30]);
         assert.strictEqual(detectEncoding(buf), 'latin1');
     });
 
@@ -199,4 +195,3 @@ suite('detectEncoding (heuristic)', () => {
         assert.strictEqual(detectEncoding(buf), 'binary');
     });
 });
-
