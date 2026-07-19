@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0] - 2026-07-19
+
+### Added
+
+- Added `Encoding Guard: Convert File to Encoding...` command that transcodes file bytes to a chosen encoding and saves to disk, distinct from the existing _Set File/Extension Encoding_ commands which only affect future interpretation via `patternMap`
+- Added `.editorconfig` charset support — `charset` values from `.editorconfig` are now read as an implicit encoding source for matching files, reducing config duplication
+
 ## [1.2.0] - 2026-07-19
 
 ### Added

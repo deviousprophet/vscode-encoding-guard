@@ -4,6 +4,7 @@ import * as path from 'path';
 import { detectXmlDeclaration, startsWithXmlPreamble, XML_DECLARATION_SCAN_BYTES } from './detector';
 import { getExpectedEncoding } from './configManager';
 import { normalizeEncoding } from './normalizer';
+import { getEditorConfigCharset } from './editorconfigReader';
 
 const INITIAL_SCAN_BYTES = 4 * 1024;
 const DEFAULT_ENCODINGS = new Set(['utf8', 'ascii']);
@@ -56,7 +57,8 @@ export function resolveTargetEncoding(uri: vscode.Uri, buf: Buffer): string | nu
         return detectHeuristicEncoding(buf);
     }
 
-    return null;
+    // Check .editorconfig charset as lowest-priority source.
+    return getEditorConfigCharset(uri.fsPath);
 }
 
 /**
