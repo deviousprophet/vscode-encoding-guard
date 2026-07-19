@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { detectEncoding, detectXmlDeclaration } from './detector';
+import { detectEncoding, detectXmlDeclaration, detectBom } from './detector';
 import { getExpectedEncoding } from './configManager';
 import { normalizeEncoding } from './normalizer';
-import { handleDocumentOpen } from './applier';
+import { handleDocumentOpen, reopenWithEncoding } from './applier';
 import { pickEncoding } from './encodingList';
+import { convertBuffer } from './converter';
 
 type EncodingDetection = {
     detected: string;
@@ -126,6 +127,44 @@ async function setFileEncoding(uri?: vscode.Uri): Promise<void> {
     vscode.window.showInformationMessage(`Encoding Guard: Set ${relPath} → ${chosen}`);
 }
 
+function resolveCurrentEncoding(uri: vscode.Uri, rawBytes: Buffer): string {
+    const configured = getExpectedEncoding(uri);
+    if (configured !== null) { return configured; }
+    const xmlDecl = detectXmlDeclaration(rawBytes);
+    if (xmlDecl !== null) { return xmlDecl; }
+    return normalizeEncoding(detectBom(rawBytes) ?? 'utf8');
+}
+
+function readFileBytes(filePath: string): Buffer | undefined {
+    try { return fs.readFileSync(filePath); }
+    catch { vscode.window.showErrorMessage('Encoding Guard: Could not read file.'); }
+}
+
+async function writeWithEncoding(uri: vscode.Uri, buf: Buffer, fromEnc: string, toEnc: string): Promise<void> {
+    const converted = convertBuffer(buf, fromEnc, toEnc);
+    fs.writeFileSync(uri.fsPath, converted);
+    await reopenWithEncoding(uri, toEnc);
+}
+
+async function convertFileEncoding(uri?: vscode.Uri): Promise<void> {
+    const targetUri = getCommandTargetUri(uri);
+    if (!targetUri) {
+        vscode.window.showWarningMessage('Encoding Guard: No active text editor.');
+        return;
+    }
+
+    const rawBytes = readFileBytes(targetUri.fsPath);
+    if (!rawBytes) { return; }
+
+    const currentEnc = resolveCurrentEncoding(targetUri, rawBytes);
+    const chosen = await pickEncoding(currentEnc);
+    if (!chosen) { return; }
+
+    const targetEnc = normalizeEncoding(chosen);
+    await writeWithEncoding(targetUri, rawBytes, currentEnc, targetEnc);
+    vscode.window.showInformationMessage(`Encoding Guard: Converted to ${targetEnc}`);
+}
+
 async function openEncodingGuardSettings(): Promise<void> {
     await vscode.commands.executeCommand('workbench.action.openSettings', 'encoding-guard');
 }
@@ -150,6 +189,11 @@ export function activate(context: vscode.ExtensionContext) {
     // encoding-guard.setFileEncoding — pick an encoding and store it in patternMap for this specific file.
     context.subscriptions.push(
         vscode.commands.registerCommand('encoding-guard.setFileEncoding', setFileEncoding),
+    );
+
+    // encoding-guard.convertFileEncoding
+    context.subscriptions.push(
+        vscode.commands.registerCommand('encoding-guard.convertFileEncoding', convertFileEncoding),
     );
 
     // encoding-guard.openSettings — open Settings UI filtered to encoding-guard.
