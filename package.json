@@ -3,7 +3,7 @@
   "displayName": "Encoding Guard",
   "publisher": "deviousprophet",
   "description": "Protects you from wrong encodings — Automatically detects and applies the correct file encoding on open.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -137,6 +137,7 @@
     "typescript-eslint": "^8.56.1"
   },
   "dependencies": {
+    "editorconfig": "^3.0.2",
     "iconv-lite": "^0.7.3",
     "jschardet": "^3.1.4"
   }

@@ -1,4 +1,6 @@
 const esbuild = require("esbuild");
+const fs = require("fs");
+const path = require("path");
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -38,7 +40,17 @@ async function main() {
 		external: ['vscode'],
 		logLevel: 'silent',
 		plugins: [
-			/* add to the end of plugins array */
+			{
+				name: 'copy-wasm',
+				setup(build) {
+					build.onEnd(() => {
+						fs.cpSync(
+							path.join(__dirname, 'node_modules', '@one-ini', 'wasm', 'one_ini_bg.wasm'),
+							path.join(__dirname, 'dist', 'one_ini_bg.wasm'),
+						);
+					});
+				},
+			},
 			esbuildProblemMatcherPlugin,
 		],
 	});
