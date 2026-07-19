@@ -12,10 +12,12 @@ Encoding Guard is a VS Code extension that automatically detects and applies the
 1. **Pattern matching** — Map file patterns to encodings via `encoding-guard.patternMap`. Patterns are matched by specificity:
    - **Exact paths** (e.g., `data/report.csv`) — highest priority, specific file overrides
    - **Glob patterns** (e.g., `src/**/*.xml`, `**/*.csv`) — medium priority, more specific globs win over less specific
-   - **Extension shorthand** (e.g., `.csv`) — lowest priority, acts as default for all matching extensions
-2. **XML declaration** — For any file that starts with `<?xml ... encoding="..."?>`, Encoding Guard reads the declared encoding and silently reopens the file with the correct encoding if VS Code opened it with a different one.
+   - **Extension shorthand** (e.g. `.csv`) — lowest priority, acts as default for all matching extensions
+2. **XML declaration** — For any file that starts with `<?xml ... encoding="..."?>`, Encoding Guard reads the declared encoding and silently reopens the file with the correct encoding if VS Code opened it with a different one. BOM-prefixed XML files (UTF-8 BOM, UTF-16 LE/BE) are handled transparently — the BOM is detected internally and skipped when parsing the declaration.
 
 Priority order: `patternMap` (by specificity) → XML declaration → no action.
+
+> **Note:** UTF-8 BOM, UTF-16 LE, and UTF-16 BE files are also detected and reopened with the correct encoding. VS Code handles BOM natively for non-XML files; Encoding Guard's BOM detection additionally powers XML declaration parsing for BOM-prefixed XML files.
 
 ## Configuration
 
