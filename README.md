@@ -60,7 +60,7 @@ Or edit settings manually:
 Right-click any file in the Explorer or editor to access the **Encoding Guard** submenu:
 
 | Item | Action |
-|---|---|---|
+|---|---|
 | **Set Extension Encoding...** | Pick an encoding and apply it to all files with this extension (adds `.ext` to `patternMap`) |
 | **Set File Encoding...** | Pick an encoding and pin it to this specific file (adds exact path to `patternMap`) |
 | **Convert File to Encoding...** | Read file from disk, transcode bytes to a chosen encoding, and save |
