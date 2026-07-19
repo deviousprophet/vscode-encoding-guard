@@ -24,6 +24,7 @@ const ENCODING_LIST: EncodingItem[] = [
 
     // Central European
     { id: 'iso88592',   label: 'Central European (ISO 8859-2)',   description: 'iso88592' },
+    { id: 'iso88594',   label: 'Baltic (ISO 8859-4)',             description: 'iso88594' },
     { id: 'iso885910',  label: 'Northern European (ISO 8859-10)', description: 'iso885910' },
     { id: 'iso885914',  label: 'Celtic (ISO 8859-14)',            description: 'iso885914' },
     { id: 'windows1250',label: 'Central European (Windows 1250)', description: 'windows1250' },

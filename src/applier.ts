@@ -62,6 +62,25 @@ export function resolveTargetEncoding(uri: vscode.Uri, buf: Buffer): string | nu
 }
 
 /**
+ * Returns a human-readable label for which encoding source resolved to a value,
+ * matching the priority order in `resolveTargetEncoding`.
+ */
+export function getEncodingSource(uri: vscode.Uri, buf: Buffer): string | null {
+    const configured = getExpectedEncoding(uri);
+    if (configured !== null) { return 'patternMap'; }
+    const xmlDecl = detectXmlDeclaration(buf);
+    if (xmlDecl !== null) { return 'XML declaration'; }
+    const cfg = vscode.workspace.getConfiguration('encoding-guard', uri);
+    if (cfg.get<boolean>('enableHeuristicFallback', false)) {
+        const heuristic = detectHeuristicEncoding(buf);
+        if (heuristic !== null) { return 'heuristic fallback'; }
+    }
+    const ecCharset = getEditorConfigCharset(uri.fsPath);
+    if (ecCharset !== null) { return '.editorconfig charset'; }
+    return null;
+}
+
+/**
  * Temporarily sets `files.encoding` to `target`, reverts the document so
  * VS Code re-reads it with that encoding, then restores the previous value.
  */

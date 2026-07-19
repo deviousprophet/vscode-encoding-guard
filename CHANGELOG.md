@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.0] - 2026-07-19
+
+### Added
+
+- Added encoding source label to the `Detect Encoding` dialog showing which layer resolved the file's encoding (`patternMap`, `XML declaration`, `.editorconfig charset`, or `heuristic fallback`)
+- Added missing `ISO 8859-4` (`iso88594`) entry to the encoding picker
+
+### Fixed
+
+- Added error handling for malformed `.editorconfig` files to silently return no match instead of throwing
+
 ## [1.3.0] - 2026-07-19
 
 ### Added

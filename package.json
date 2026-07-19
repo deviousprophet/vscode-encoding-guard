@@ -3,7 +3,7 @@
   "displayName": "Encoding Guard",
   "publisher": "deviousprophet",
   "description": "Protects you from wrong encodings — Automatically detects and applies the correct file encoding on open.",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "license": "MIT",
   "repository": {
     "type": "git",
