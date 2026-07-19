@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export interface EncodingItem extends vscode.QuickPickItem {
+interface EncodingItem extends vscode.QuickPickItem {
     id: string; // VS Code encoding identifier
 }
 
@@ -8,7 +8,7 @@ export interface EncodingItem extends vscode.QuickPickItem {
  * All encodings supported by Encoding Guard, suitable for display in a QuickPick.
  * Labels mirror the names shown in VS Code's own encoding picker.
  */
-export const ENCODING_LIST: EncodingItem[] = [
+const ENCODING_LIST: EncodingItem[] = [
     // Unicode
     { id: 'utf8',       label: 'UTF-8',                     description: 'utf8' },
     { id: 'utf8bom',    label: 'UTF-8 with BOM',            description: 'utf8bom' },

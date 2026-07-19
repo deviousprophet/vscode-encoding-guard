@@ -43,6 +43,86 @@ async function reopenWithEncoding(uri: vscode.Uri, target: string): Promise<void
     }
 }
 
+function readFilePrefix(fd: number, bytes: number): Buffer {
+    const buf = Buffer.alloc(bytes);
+    const bytesRead = fs.readSync(fd, buf, 0, bytes, 0);
+    return buf.subarray(0, bytesRead);
+}
+
+function needsWidenedScan(buf: Buffer): boolean {
+    return (
+        buf.length === INITIAL_SCAN_BYTES &&
+        detectXmlDeclaration(buf) === null &&
+        startsWithXmlPreamble(buf)
+    );
+}
+
+function readDetectionBuffer(filePath: string): Buffer {
+    const fd = fs.openSync(filePath, 'r');
+    try {
+        const initial = readFilePrefix(fd, INITIAL_SCAN_BYTES);
+        return needsWidenedScan(initial)
+            ? readFilePrefix(fd, XML_DECLARATION_SCAN_BYTES)
+            : initial;
+    } finally {
+        fs.closeSync(fd);
+    }
+}
+
+function getRawDocumentEncoding(doc: vscode.TextDocument): string | undefined {
+    return (doc as any).encoding;
+}
+
+function getResolvedTarget(doc: vscode.TextDocument, buf: Buffer): string | null {
+    const target = resolveTargetEncoding(doc.uri, buf);
+    console.log(`[Encoding Guard] target encoding : ${target ?? '(none — no declaration or config)'}`);
+    return target;
+}
+
+function getCurrentEncoding(doc: vscode.TextDocument): string | null {
+    const rawEncoding = getRawDocumentEncoding(doc);
+    if (rawEncoding === undefined) {
+        console.warn('[Encoding Guard] doc.encoding unavailable — skipping');
+        return null;
+    }
+
+    const current = normalizeEncoding(rawEncoding);
+    console.log(`[Encoding Guard] current encoding: ${current} (raw: ${rawEncoding})`);
+    return current;
+}
+
+function getReopenTarget(doc: vscode.TextDocument, buf: Buffer): string | null {
+    const target = getResolvedTarget(doc, buf);
+    if (target === null) { return null; }
+    const current = getCurrentEncoding(doc);
+    return current !== null && current !== target ? target : null;
+}
+
+async function applyResolvedEncoding(doc: vscode.TextDocument, buf: Buffer): Promise<void> {
+    const target = getReopenTarget(doc, buf);
+    if (target === null) { return; }
+
+    console.log(`[Encoding Guard] ⚠ mismatch — reopening as '${target}'`);
+    await reopenWithEncoding(doc.uri, target);
+}
+
+function readDocumentBuffer(doc: vscode.TextDocument): Buffer | null {
+    try {
+        return readDetectionBuffer(doc.uri.fsPath);
+    } catch (err) {
+        console.error(`[Encoding Guard] could not read file: ${err}`);
+        return null;
+    }
+}
+
+async function safelyApplyResolvedEncoding(doc: vscode.TextDocument, buf: Buffer): Promise<void> {
+    try {
+        await applyResolvedEncoding(doc, buf);
+    } catch (err) {
+        console.error(`[Encoding Guard] unexpected error: ${err}`);
+    }
+}
+
 /**
  * Called when a document is opened. Reads the raw bytes, resolves the target
  * encoding from config/declaration, and silently reopens the file with the
@@ -53,57 +133,8 @@ export async function handleDocumentOpen(doc: vscode.TextDocument): Promise<void
 
     console.log(`[Encoding Guard] open: ${path.basename(doc.uri.fsPath)}`);
 
-    let buf: Buffer;
-    try {
-        const fd = fs.openSync(doc.uri.fsPath, 'r');
-        try {
-            // 1) Cheap first pass: read a small prefix for most files.
-            const initial = Buffer.alloc(INITIAL_SCAN_BYTES);
-            const initialBytes = fs.readSync(fd, initial, 0, INITIAL_SCAN_BYTES, 0);
-            buf = initial.subarray(0, initialBytes);
-
-            // 2) If header looks XML-like but declaration was not fully captured,
-            //    widen to the full declaration scan window.
-            if (
-                initialBytes === INITIAL_SCAN_BYTES &&
-                detectXmlDeclaration(buf) === null &&
-                startsWithXmlPreamble(buf)
-            ) {
-                const widened = Buffer.alloc(XML_DECLARATION_SCAN_BYTES);
-                const widenedBytes = fs.readSync(fd, widened, 0, XML_DECLARATION_SCAN_BYTES, 0);
-                buf = widened.subarray(0, widenedBytes);
-            }
-        } finally {
-            fs.closeSync(fd);
-        }
-    } catch (err) {
-        console.error(`[Encoding Guard] could not read file: ${err}`);
-        return;
-    }
-
-    try {
-        const target = resolveTargetEncoding(doc.uri, buf);
-        console.log(`[Encoding Guard] target encoding : ${target ?? '(none — no declaration or config)'}`);
-        if (target === null) { return; }
-
-        // doc.encoding is an undocumented but stable VS Code API property.
-        const rawEncoding: string | undefined = (doc as any).encoding;
-        if (rawEncoding === undefined) {
-            console.warn('[Encoding Guard] doc.encoding unavailable — skipping');
-            return;
-        }
-
-        const current = normalizeEncoding(rawEncoding);
-        console.log(`[Encoding Guard] current encoding: ${current} (raw: ${rawEncoding})`);
-
-        if (current === target) {
-            console.log('[Encoding Guard] ✓ already correct, no action needed');
-            return;
-        }
-
-        console.log(`[Encoding Guard] ⚠ mismatch — reopening as '${target}'`);
-        await reopenWithEncoding(doc.uri, target);
-    } catch (err) {
-        console.error(`[Encoding Guard] unexpected error: ${err}`);
+    const buf = readDocumentBuffer(doc);
+    if (buf !== null) {
+        await safelyApplyResolvedEncoding(doc, buf);
     }
 }

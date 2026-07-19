@@ -10,38 +10,38 @@ function hasGlobSyntax(pattern: string): boolean {
     return /[*?\[\]{}]/.test(pattern);
 }
 
+const GLOB_TRANSLATIONS: Record<string, string> = {
+    '?': '[^/]',
+};
+
+function escapeRegExpChar(ch: string): string {
+    return '\\^$+?.()|{}[]'.includes(ch) ? `\\${ch}` : ch;
+}
+
+function translateGlobChar(glob: string, index: number): { source: string; nextIndex: number } {
+    const ch = glob[index];
+    const translation = GLOB_TRANSLATIONS[ch];
+
+    return ch === '*'
+        ? { source: glob[index + 1] === '*' ? '.*' : '[^/]*', nextIndex: index + Number(glob[index + 1] === '*') }
+        : { source: translation ?? escapeRegExpChar(ch), nextIndex: index };
+}
+
 function globToRegExp(glob: string): RegExp {
     let out = '^';
 
     for (let i = 0; i < glob.length; i++) {
-        const ch = glob[i];
-
-        if (ch === '*') {
-            const isDoubleStar = glob[i + 1] === '*';
-            if (isDoubleStar) {
-                out += '.*';
-                i += 1;
-            } else {
-                out += '[^/]*';
-            }
-            continue;
-        }
-
-        if (ch === '?') {
-            out += '[^/]';
-            continue;
-        }
-
-        if ('\\^$+?.()|{}[]'.includes(ch)) {
-            out += `\\${ch}`;
-            continue;
-        }
-
-        out += ch;
+        const translated = translateGlobChar(glob, i);
+        out += translated.source;
+        i = translated.nextIndex;
     }
 
     out += '$';
     return new RegExp(out, 'i');
+}
+
+function isExtensionPattern(pattern: string): boolean {
+    return pattern.startsWith('.') && !pattern.includes('/');
 }
 
 function matchPattern(pattern: string, relPath: string, ext: string): boolean {
@@ -51,7 +51,7 @@ function matchPattern(pattern: string, relPath: string, ext: string): boolean {
     }
 
     // Convenience shorthand: ".csv" means "any file with .csv extension".
-    if (normalizedPattern.startsWith('.') && !normalizedPattern.includes('/')) {
+    if (isExtensionPattern(normalizedPattern)) {
         return ext === normalizedPattern.toLowerCase();
     }
 
@@ -62,22 +62,24 @@ function matchPattern(pattern: string, relPath: string, ext: string): boolean {
     return globToRegExp(normalizedPattern).test(relPath);
 }
 
-function getPatternMapEncoding(
-    patternMap: Record<string, string>,
-    relPath: string,
-    ext: string,
-): string | null {
-    // Sort patterns by specificity: exact paths > globs (by depth) > extension shorthand.
-    // This ensures specific file patterns override general extension patterns.
-    const entries = Object.entries(patternMap).filter(([, enc]) => enc && enc.trim() !== '');
-    
-    const exact: typeof entries = [];
-    const globs: typeof entries = [];
-    const extensions: typeof entries = [];
+type PatternEntry = [string, string];
+
+function getPatternEntries(patternMap: Record<string, string>): PatternEntry[] {
+    return Object.entries(patternMap).filter(([, enc]) => enc && enc.trim() !== '');
+}
+
+function groupPatternEntries(entries: PatternEntry[]): {
+    exact: PatternEntry[];
+    globs: PatternEntry[];
+    extensions: PatternEntry[];
+} {
+    const exact: PatternEntry[] = [];
+    const globs: PatternEntry[] = [];
+    const extensions: PatternEntry[] = [];
 
     for (const entry of entries) {
         const pattern = entry[0];
-        if (pattern.startsWith('.') && !pattern.includes('/')) {
+        if (isExtensionPattern(pattern)) {
             extensions.push(entry);
         } else if (hasGlobSyntax(pattern)) {
             globs.push(entry);
@@ -86,11 +88,24 @@ function getPatternMapEncoding(
         }
     }
 
-    // Sort globs by number of slashes (descending) — more slashes = more specific
-    globs.sort(([a], [b]) => b.split('/').length - a.split('/').length);
+    return { exact, globs, extensions };
+}
 
-    // Check exact paths first, then globs (most specific first), then extensions
-    for (const [pattern, encoding] of [...exact, ...globs, ...extensions]) {
+function byPathDepthDesc([a]: PatternEntry, [b]: PatternEntry): number {
+    return b.split('/').length - a.split('/').length;
+}
+
+function getPatternMapEncoding(
+    patternMap: Record<string, string>,
+    relPath: string,
+    ext: string,
+): string | null {
+    // Sort patterns by specificity: exact paths > globs (by depth) > extension shorthand.
+    // This ensures specific file patterns override general extension patterns.
+    const { exact, globs, extensions } = groupPatternEntries(getPatternEntries(patternMap));
+    globs.sort(byPathDepthDesc);
+
+    for (const [pattern, encoding] of exact.concat(globs, extensions)) {
         if (matchPattern(pattern, relPath, ext)) {
             return normalizeEncoding(encoding);
         }

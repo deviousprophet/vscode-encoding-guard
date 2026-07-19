@@ -1,110 +1,44 @@
-import { normalizeEncoding } from './normalizer';
+import { detectBom } from './xml';
 
-export const XML_DECLARATION_SCAN_BYTES = 64 * 1024;
+// Re-export public XML/BOM API so existing imports keep working.
+export { XML_DECLARATION_SCAN_BYTES, detectBom, detectXmlDeclaration, startsWithXmlPreamble } from './xml';
 
-/**
- * Fast byte-level check for an XML preamble near the start of a file.
- *
- * Skips BOM and leading ASCII whitespace, then checks for "<?xml".
- * This allows callers to decide whether a larger header read is worthwhile
- * without relying on file extension or VS Code language classification.
- */
-export function startsWithXmlPreamble(buf: Buffer): boolean {
-    if (buf.length === 0) { return false; }
-
-    let i = 0;
-
-    // Skip BOM when present.
-    if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
-        i = 3;
-    } else if (buf.length >= 2 && (
-        (buf[0] === 0xFF && buf[1] === 0xFE) ||
-        (buf[0] === 0xFE && buf[1] === 0xFF)
-    )) {
-        // UTF-16 BOM exists. We do not attempt a UTF-16 token scan here;
-        // return true so callers can perform a larger read + full parse.
-        return true;
-    }
-
-    // Skip ASCII whitespace: space, tab, CR, LF.
-    while (i < buf.length) {
-        const b = buf[i];
-        if (b === 0x20 || b === 0x09 || b === 0x0D || b === 0x0A) {
-            i += 1;
-            continue;
+function countBytes(buf: Buffer, value: number): number {
+    let count = 0;
+    for (const byte of buf) {
+        if (byte === value) {
+            count += 1;
         }
-        break;
     }
-
-    if (i + 5 > buf.length) { return false; }
-
-    // "<?xml" (case-insensitive for safety).
-    return (
-        buf[i] === 0x3C &&
-        buf[i + 1] === 0x3F &&
-        (buf[i + 2] | 0x20) === 0x78 &&
-        (buf[i + 3] | 0x20) === 0x6D &&
-        (buf[i + 4] | 0x20) === 0x6C
-    );
+    return count;
 }
 
-/**
- * Returns the encoding derived from the BOM at the start of `buf`,
- * or null if no BOM is present.
- */
-export function detectBom(buf: Buffer): string | null {
-    if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
-        return 'utf8bom';
-    }
-    if (buf.length >= 2 && buf[0] === 0xFF && buf[1] === 0xFE) {
-        return 'utf16le';
-    }
-    if (buf.length >= 2 && buf[0] === 0xFE && buf[1] === 0xFF) {
-        return 'utf16be';
-    }
-    return null;
+function isBinary(buf: Buffer): boolean {
+    return countBytes(buf, 0) / buf.length > 0.3;
 }
 
-/**
- * Attempts to extract the encoding declared inside an XML/ARXML processing
- * instruction, e.g. <?xml version="1.0" encoding="ISO-8859-1"?>.
- *
- * Reads only the first `XML_DECLARATION_SCAN_BYTES` bytes of `buf` for performance.
- * Returns a normalized VS Code encoding identifier, or null if not found.
- */
-export function detectXmlDeclaration(buf: Buffer): string | null {
-    if (buf.length === 0) { return null; }
-
-    // Decode the header into a string we can regex against.
-    // For UTF-16 files we must handle the byte order before decoding.
-    let header: string;
-    const bom = detectBom(buf);
-
-    if (bom === 'utf16le') {
-        // Skip the 2-byte BOM, then decode as UTF-16 LE.
-        const slice = buf.subarray(2, Math.min(buf.length, XML_DECLARATION_SCAN_BYTES));
-        header = slice.toString('utf16le');
-    } else if (bom === 'utf16be') {
-        // Skip the 2-byte BOM, swap byte pairs, then decode as UTF-16 LE.
-        const slice = buf.subarray(2, Math.min(buf.length, XML_DECLARATION_SCAN_BYTES));
-        const swapped = Buffer.alloc(slice.length & ~1); // round down to even
-        for (let i = 0; i + 1 < slice.length; i += 2) {
-            swapped[i]     = slice[i + 1];
-            swapped[i + 1] = slice[i];
-        }
-        header = swapped.toString('utf16le');
-    } else {
-        // ASCII / UTF-8 / single-byte — the declaration is always in the ASCII
-        // range so latin1 decoding is safe and avoids losing bytes.
-        header = buf.subarray(0, Math.min(buf.length, XML_DECLARATION_SCAN_BYTES)).toString('latin1');
-    }
-
-    // Match:  <?xml  ...  encoding="UTF-8"  ?>  (single or double quotes)
-    const match = header.match(/<\?xml[^?]*encoding\s*=\s*["']([^"']+)["']/i);
-    if (!match) { return null; }
-
-    return normalizeEncoding(match[1]);
+function isUtf8RoundTrip(buf: Buffer): boolean {
+    const text = buf.toString('utf8');
+    return !text.includes('\uFFFD') && Buffer.from(text, 'utf8').equals(buf);
 }
+
+function detectEmpty(buf: Buffer): string | null {
+    return buf.length === 0 ? 'utf8' : null;
+}
+
+function detectBinary(buf: Buffer): string | null {
+    return isBinary(buf) ? 'binary' : null;
+}
+
+function detectUtf8(buf: Buffer): string | null {
+    try {
+        return isUtf8RoundTrip(buf) ? 'utf8' : null;
+    } catch {
+        return null;
+    }
+}
+
+const ENCODING_DETECTORS = [detectBom, detectEmpty, detectBinary, detectUtf8];
 
 /**
  * Heuristic encoding detection from raw bytes.
@@ -117,28 +51,7 @@ export function detectXmlDeclaration(buf: Buffer): string | null {
  * Returns a VS Code encoding identifier.
  */
 export function detectEncoding(buf: Buffer): string {
-    const bom = detectBom(buf);
-    if (bom) { return bom; }
-
-    if (buf.length === 0) { return 'utf8'; }
-
-    // Binary detection: more than 30 % NUL bytes.
-    let nulCount = 0;
-    for (let i = 0; i < buf.length; i++) {
-        if (buf[i] === 0) { nulCount++; }
-    }
-    if (nulCount / buf.length > 0.3) { return 'binary'; }
-
-    // UTF-8 round-trip: decode as UTF-8, re-encode, compare raw bytes.
-    try {
-        const text = buf.toString('utf8');
-        if (!text.includes('\uFFFD')) {
-            const reencoded = Buffer.from(text, 'utf8');
-            if (reencoded.equals(buf)) { return 'utf8'; }
-        }
-    } catch {
-        // fall through
-    }
-
-    return 'latin1';
+    return ENCODING_DETECTORS
+        .map(detector => detector(buf))
+        .find((encoding): encoding is string => encoding !== null) ?? 'latin1';
 }
