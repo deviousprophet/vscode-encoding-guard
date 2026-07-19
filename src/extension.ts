@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { detectEncoding, detectXmlDeclaration } from './detector';
+import { detectEncoding, detectXmlDeclaration, detectBom } from './detector';
 import { getExpectedEncoding } from './configManager';
 import { normalizeEncoding } from './normalizer';
-import { handleDocumentOpen } from './applier';
+import { handleDocumentOpen, reopenWithEncoding } from './applier';
 import { pickEncoding } from './encodingList';
-import { convertBuffer, hasBom } from './converter';
+import { convertBuffer } from './converter';
 
 type EncodingDetection = {
     detected: string;
@@ -128,22 +128,22 @@ async function setFileEncoding(uri?: vscode.Uri): Promise<void> {
 }
 
 function resolveCurrentEncoding(uri: vscode.Uri, rawBytes: Buffer): string {
-    return normalizeEncoding(getExpectedEncoding(uri) ?? hasBom(rawBytes) ?? 'utf8');
+    const configured = getExpectedEncoding(uri);
+    if (configured !== null) { return configured; }
+    const xmlDecl = detectXmlDeclaration(rawBytes);
+    if (xmlDecl !== null) { return xmlDecl; }
+    return normalizeEncoding(detectBom(rawBytes) ?? 'utf8');
 }
 
-function writeConvertedFile(filePath: string, buf: Buffer): void {
-    fs.writeFileSync(filePath, buf);
-    vscode.commands.executeCommand('workbench.action.files.revert');
+function readFileBytes(filePath: string): Buffer | undefined {
+    try { return fs.readFileSync(filePath); }
+    catch { vscode.window.showErrorMessage('Encoding Guard: Could not read file.'); }
 }
 
-function transcodeFile(filePath: string, buf: Buffer, fromEnc: string, toEnc: string): void {
-    try {
-        const converted = convertBuffer(buf, fromEnc, toEnc);
-        writeConvertedFile(filePath, converted);
-        vscode.window.showInformationMessage(`Encoding Guard: Converted to ${toEnc}`);
-    } catch (err) {
-        vscode.window.showErrorMessage(`Encoding Guard: Conversion failed — ${err}`);
-    }
+async function writeWithEncoding(uri: vscode.Uri, buf: Buffer, fromEnc: string, toEnc: string): Promise<void> {
+    const converted = convertBuffer(buf, fromEnc, toEnc);
+    fs.writeFileSync(uri.fsPath, converted);
+    await reopenWithEncoding(uri, toEnc);
 }
 
 async function convertFileEncoding(uri?: vscode.Uri): Promise<void> {
@@ -153,18 +153,16 @@ async function convertFileEncoding(uri?: vscode.Uri): Promise<void> {
         return;
     }
 
-    const rawBytes = fs.readFileSync(targetUri.fsPath);
+    const rawBytes = readFileBytes(targetUri.fsPath);
+    if (!rawBytes) { return; }
+
     const currentEnc = resolveCurrentEncoding(targetUri, rawBytes);
     const chosen = await pickEncoding(currentEnc);
     if (!chosen) { return; }
 
     const targetEnc = normalizeEncoding(chosen);
-    if (targetEnc === currentEnc) {
-        vscode.window.showInformationMessage(`Encoding Guard: File is already ${currentEnc}.`);
-        return;
-    }
-
-    transcodeFile(targetUri.fsPath, rawBytes, currentEnc, targetEnc);
+    await writeWithEncoding(targetUri, rawBytes, currentEnc, targetEnc);
+    vscode.window.showInformationMessage(`Encoding Guard: Converted to ${targetEnc}`);
 }
 
 async function openEncodingGuardSettings(): Promise<void> {

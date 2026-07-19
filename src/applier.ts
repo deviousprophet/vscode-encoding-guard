@@ -63,7 +63,7 @@ export function resolveTargetEncoding(uri: vscode.Uri, buf: Buffer): string | nu
  * Temporarily sets `files.encoding` to `target`, reverts the document so
  * VS Code re-reads it with that encoding, then restores the previous value.
  */
-async function reopenWithEncoding(uri: vscode.Uri, target: string): Promise<void> {
+export async function reopenWithEncoding(uri: vscode.Uri, target: string): Promise<void> {
     const filesConfig = vscode.workspace.getConfiguration('files');
     const prev = filesConfig.inspect<string>('encoding')?.globalValue;
 

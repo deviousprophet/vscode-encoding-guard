@@ -1,4 +1,5 @@
 import * as iconv from 'iconv-lite';
+import { detectBom } from './detector';
 
 const VSCODE_TO_ICONV: Record<string, string> = {
     utf8: 'utf-8',
@@ -40,11 +41,7 @@ const VSCODE_TO_ICONV: Record<string, string> = {
 
 const UTF8_BOM = Buffer.from([0xEF, 0xBB, 0xBF]);
 
-const BOM_TABLE: [number[], string][] = [
-    [[0xEF, 0xBB, 0xBF], 'utf8bom'],
-    [[0xFF, 0xFE], 'utf16le'],
-    [[0xFE, 0xFF], 'utf16be'],
-];
+export { detectBom as hasBom };
 
 function toIconvEncoding(vscodeEnc: string): string | undefined {
     return VSCODE_TO_ICONV[vscodeEnc];
@@ -52,15 +49,6 @@ function toIconvEncoding(vscodeEnc: string): string | undefined {
 
 function needsBom(vscodeEnc: string): Buffer | null {
     if (vscodeEnc === 'utf8bom') { return UTF8_BOM; }
-    return null;
-}
-
-export function hasBom(buf: Buffer): string | null {
-    for (const [bytes, enc] of BOM_TABLE) {
-        if (buf.length >= bytes.length && bytes.every((b, i) => buf[i] === b)) {
-            return enc;
-        }
-    }
     return null;
 }
 
