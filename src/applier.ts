@@ -6,12 +6,37 @@ import { getExpectedEncoding } from './configManager';
 import { normalizeEncoding } from './normalizer';
 
 const INITIAL_SCAN_BYTES = 4 * 1024;
+const DEFAULT_ENCODINGS = new Set(['utf8', 'ascii']);
+
+function isLowConfidence(encoding: string | undefined, confidence: number): boolean {
+    return !encoding || confidence < 0.5;
+}
+
+function isDefaultEncoding(normalized: string): boolean {
+    return DEFAULT_ENCODINGS.has(normalized);
+}
+
+/**
+ * Heuristic encoding detection via jschardet.
+ * Returns a normalized VS Code encoding identifier, or null when detection
+ * confidence is too low or the result is already UTF-8/ASCII (no intervention needed).
+ */
+export function detectHeuristicEncoding(buf: Buffer): string | null {
+    if (buf.length === 0) { return null; }
+    // Lazy require: jschardet is opt-in, only loaded when heuristic fallback runs.
+    const jschardet = require('jschardet') as typeof import('jschardet');
+    const { encoding, confidence } = jschardet.detect(buf);
+    if (isLowConfidence(encoding, confidence)) { return null; }
+    const normalized = normalizeEncoding(encoding);
+    return isDefaultEncoding(normalized) ? null : normalized;
+}
 
 /**
  * Determines what encoding a file *should* be opened with, based on:
  *  1. Explicit config via `encoding-guard.patternMap` (glob/exact/extension patterns)
  *  2. Fallback for any file: check for an XML/ARXML encoding declaration
  *     (<?xml version="1.0" encoding="..."?>) in the file header window.
+ *  3. Optional heuristic fallback via jschardet (opt-in via enableHeuristicFallback).
  *
  * Returns a normalized VS Code encoding identifier, or null when no
  * intervention is needed (no config match and no XML declaration found).
@@ -22,7 +47,16 @@ export function resolveTargetEncoding(uri: vscode.Uri, buf: Buffer): string | nu
         return configured; // explicit config always wins
     }
     // Universal fallback: detect encoding from XML declaration if present.
-    return detectXmlDeclaration(buf);
+    const xmlDecl = detectXmlDeclaration(buf);
+    if (xmlDecl !== null) { return xmlDecl; }
+
+    // Opt-in heuristic fallback via jschardet.
+    const cfg = vscode.workspace.getConfiguration('encoding-guard', uri);
+    if (cfg.get<boolean>('enableHeuristicFallback', false)) {
+        return detectHeuristicEncoding(buf);
+    }
+
+    return null;
 }
 
 /**
