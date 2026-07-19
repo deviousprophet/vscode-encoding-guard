@@ -28,5 +28,10 @@ suite('Extension activation', () => {
         const commands = await vscode.commands.getCommands(true);
         assert.ok(commands.includes('encoding-guard.openSettings'), 'encoding-guard.openSettings not registered');
     });
+
+    test('encoding-guard.convertFileEncoding command is registered', async () => {
+        const commands = await vscode.commands.getCommands(true);
+        assert.ok(commands.includes('encoding-guard.convertFileEncoding'), 'encoding-guard.convertFileEncoding not registered');
+    });
 });
 

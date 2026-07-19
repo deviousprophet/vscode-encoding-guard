@@ -38,6 +38,11 @@
         "category": "Encoding Guard"
       },
       {
+        "command": "encoding-guard.convertFileEncoding",
+        "title": "Convert File to Encoding...",
+        "category": "Encoding Guard"
+      },
+      {
         "command": "encoding-guard.openSettings",
         "title": "Open Encoding Guard Settings",
         "category": "Encoding Guard"
@@ -72,6 +77,10 @@
         {
           "command": "encoding-guard.setFileEncoding",
           "group": "1_config@2"
+        },
+        {
+          "command": "encoding-guard.convertFileEncoding",
+          "group": "1_config@3"
         },
         {
           "command": "encoding-guard.openSettings",
@@ -115,6 +124,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/iconv-lite": "^0.0.1",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.120.0",
@@ -127,6 +137,7 @@
     "typescript-eslint": "^8.56.1"
   },
   "dependencies": {
+    "iconv-lite": "^0.7.3",
     "jschardet": "^3.1.4"
   }
 }
