@@ -1,5 +1,6 @@
 out
 dist
+.trellis/tasks/
 node_modules
 .vscode-test/
 *.vsix
