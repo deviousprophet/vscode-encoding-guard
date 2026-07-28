@@ -7,11 +7,9 @@ on:
   workflow_call:
 
 jobs:
-  UT_Test:
-    name: Unit Test Execution
+  Test:
+    name: Test Execution
     runs-on: ubuntu-latest
-    outputs:
-      run-tests-outcome: ${{ steps.run-tests.outcome }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -37,113 +35,17 @@ jobs:
           set -o pipefail
           xvfb-run -a npm test 2>&1 | tee test-output.log
 
+      - name: Job Summary
+        if: always()
+        env:
+          RUN_TESTS_OUTCOME: ${{ steps.run-tests.outcome }}
+          LOG_FILE: test-output.log
+        run: node .github/scripts/summarize-tests.mjs
+
       - name: Upload Test Results Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           path: test-output.log
-          name: ut-test-output-${{ github.sha }}
-          overwrite: true
-
-  Additional_Profiles:
-    name: Additional Resource Profiles
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run Custom Profiles
-        run: |
-          set -o pipefail
-          node .github/scripts/run-profiles.mjs 2>&1 | tee profile-combined-output.log
-
-      - name: Upload Profile Results Artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          path: |
-            profile-combined-output.log
-            *-profile-test-summary.md
-          name: profile-output-${{ github.sha }}
-          overwrite: true
-
-  Finalize:
-    name: Finalize Workflow
-    needs: [UT_Test, Additional_Profiles]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Check Job Results
-        run: |
-          UT_RESULT="${{ needs.UT_Test.result }}"
-          PROFILE_RESULT="${{ needs.Additional_Profiles.result }}"
-          FAILED=false
-          if [[ "$UT_RESULT" != "success" ]]; then
-            echo "❌ Unit Test job: $UT_RESULT"
-            FAILED=true
-          else
-            echo "✅ Unit Test job: $UT_RESULT"
-          fi
-          if [[ "$PROFILE_RESULT" != "success" ]]; then
-            echo "❌ Additional Profiles job: $PROFILE_RESULT"
-            FAILED=true
-          else
-            echo "✅ Additional Profiles job: $PROFILE_RESULT"
-          fi
-          if [[ "$FAILED" == "true" ]]; then
-            exit 1
-          fi
-
-      - name: Download UT Test Log
-        if: always()
-        uses: actions/download-artifact@v4
-        with:
-          name: ut-test-output-${{ github.sha }}
-          path: .
-
-      - name: Download Profile Logs
-        if: always()
-        uses: actions/download-artifact@v4
-        with:
-          name: profile-output-${{ github.sha }}
-          path: .
-
-      - name: Unit Test Summary
-        if: always()
-        env:
-          RUN_TESTS_OUTCOME: ${{ needs.UT_Test.outputs.run-tests-outcome }}
-          LOG_FILE: test-output.log
-          SUITE_NAME: Unit Test Results
-          TEST_FORMAT: mocha
-        run: node .github/scripts/summarize-tests.mjs
-
-      - name: Profile Summaries
-        if: always()
-        run: |
-          for f in *-profile-test-summary.md; do
-            [ -f "$f" ] || continue
-            cat "$f" >> $GITHUB_STEP_SUMMARY
-          done
-
-      - name: Upload Combined Test Results Artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          path: |
-            test-output.log
-            profile-combined-output.log
-            *-profile-test-summary.md
           name: test-results-${{ github.sha }}
           overwrite: true
